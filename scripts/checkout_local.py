@@ -37,6 +37,14 @@ _fixture_redact = importlib.util.module_from_spec(_REDACT_SPEC)
 _REDACT_SPEC.loader.exec_module(_fixture_redact)
 redact_payment = _fixture_redact.redact_payment
 
+_CHECK_SPEC = importlib.util.spec_from_file_location(
+    "check_identifiers", Path(__file__).resolve().parent / "check_identifiers.py"
+)
+assert _CHECK_SPEC is not None and _CHECK_SPEC.loader is not None
+_check_identifiers = importlib.util.module_from_spec(_CHECK_SPEC)
+_CHECK_SPEC.loader.exec_module(_check_identifiers)
+HARNESS_PREFILL = _check_identifiers.HARNESS_PREFILL
+
 
 @dataclass
 class CheckoutState:
@@ -80,9 +88,9 @@ const options = {{
   // Deliberately fake test-harness prefill; contact/email land on the payment
   // object and are dropped by redact_payment().
   prefill: {{
-    name: "Test Buyer",
-    email: "buyer@example.invalid",
-    contact: "9000090000",
+    name: {json.dumps(HARNESS_PREFILL["name"])},
+    email: {json.dumps(HARNESS_PREFILL["email"])},
+    contact: {json.dumps(HARNESS_PREFILL["contact"])},
   }},
   handler: function (response) {{
     fetch("/callback", {{

@@ -26,6 +26,18 @@ Suppression
 A suppression requires an exact-literal ALLOWLIST entry with a non-empty reason
 string **and** a DECISIONS.md entry, mirroring RULES 23 (findings are deleted,
 not silenced). Never regex relaxation, never whole-file skip.
+
+Synthetic test-harness contacts
+===============================
+
+``SYNTHETIC_CONTACTS`` holds hardcoded constants from the Checkout test harness,
+chosen because they belong to no real person. ``buyer@example.invalid`` uses the
+reserved ``.invalid`` TLD, which cannot resolve. A detector match whose matched
+text is **exactly** one of these literals is not a finding under both policies.
+This narrows what counts as PII; it is not a per-file exception. The ALLOWLIST
+stays empty. No detector class emits a person's name, so the ``name`` entry in
+``HARNESS_PREFILL`` is never reachable by the finding filter and exists solely
+as the harness prefill source of truth.
 """
 
 from __future__ import annotations
@@ -36,11 +48,19 @@ import sys
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
+from typing import Final
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # (exact_literal, path, reason) — exact literal match only; reason must be non-empty.
 ALLOWLIST: list[tuple[str, str, str]] = []
+
+HARNESS_PREFILL: Final[dict[str, str]] = {
+    "contact": "9000090000",
+    "email": "buyer@example.invalid",
+    "name": "Test Buyer",
+}
+SYNTHETIC_CONTACTS: frozenset[str] = frozenset(HARNESS_PREFILL.values())
 
 
 class Policy(Enum):
@@ -221,6 +241,8 @@ def scan_text(text: str, path: Path, policy: Policy) -> list[Finding]:
     findings: list[Finding] = []
     for detector in POLICY_DETECTORS[policy]:
         for finding in findings_for_detector(detector, text, path):
+            if finding.matched in SYNTHETIC_CONTACTS:
+                continue
             if not is_allowlisted(finding.matched, finding.path):
                 findings.append(finding)
     return findings
@@ -314,12 +336,9 @@ def main(argv: list[str] | None = None) -> int:
             print("--policy is required when --root is set", file=sys.stderr)
             return 1
         roots = ((args.root.resolve(), Policy(args.policy)),)
-        label_data = args.root.name
-        label_fixtures = "0"
+        label_root = str(args.root.resolve())
     else:
         roots = SCAN_ROOTS
-        label_data = "data"
-        label_fixtures = "fixtures"
 
     findings, counts, messages = run_scan(roots)
 
@@ -333,10 +352,8 @@ def main(argv: list[str] | None = None) -> int:
             f"scanned {data_count} files under data/, {fixtures_count} files under fixtures/"
         )
     else:
-        scanned = counts.get(label_data, 0)
-        print(
-            f"scanned {scanned} files under {label_data}/, {label_fixtures} files under {label_fixtures}/"
-        )
+        scanned = next(iter(counts.values()), 0)
+        print(f"scanned {scanned} files under {label_root}/")
 
     for finding in findings:
         print(format_finding(finding))

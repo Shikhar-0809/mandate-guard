@@ -58,3 +58,18 @@ redactor.
 Rejected: S2S payment creation (not enabled); committing the raw fetched
 object, which carries email, contact, card.last4 and acquirer_data.rrn.
 Revisit: if S2S is enabled on the account.
+
+## D006 — synthetic test contacts are not PII
+Date: 2026-08-28
+Context: D003's revisit trigger fired — a fixture needed a suppression, so
+the policy was wrong. The scanner flagged 9000090000 and
+buyer@example.invalid, which are hardcoded test-harness constants
+belonging to no person.
+Choice: narrow the scanner's definition of PII with an exact-literal
+SYNTHETIC_CONTACTS set, tested from both sides. ALLOWLIST stays empty.
+Rejected: a path-scoped ALLOWLIST entry — it says "this file may contain a
+phone number" and would stay silent if a REAL number landed there;
+substring or case-insensitive matching — both would suppress a real address
+that merely contains or case-varies the synthetic one.
+Revisit: if SYNTHETIC_CONTACTS exceeds ~5 entries, or if any entry is not
+a literal hardcoded in the harness.

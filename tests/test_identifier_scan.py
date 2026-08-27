@@ -121,6 +121,96 @@ def test_live_mode_never_allowed(tmp_path: Path) -> None:
         assert "RZP_LIVE" in result.stdout
 
 
+@pytest.mark.parametrize("policy", ["deny_all", "deny_secrets_and_pii"])
+def test_synthetic_contact_scans_clean(tmp_path: Path, policy: str) -> None:
+    sample = tmp_path / "synthetic_contact.txt"
+    sample.write_text("contact 9000090000\n", encoding="utf-8")
+
+    result = run_scan(tmp_path, policy)
+
+    assert result.returncode == 0, result.stdout
+    assert "PHONE_IN" not in result.stdout
+
+
+@pytest.mark.parametrize("policy", ["deny_all", "deny_secrets_and_pii"])
+def test_synthetic_email_scans_clean(tmp_path: Path, policy: str) -> None:
+    sample = tmp_path / "synthetic_email.txt"
+    sample.write_text("email buyer@example.invalid\n", encoding="utf-8")
+
+    result = run_scan(tmp_path, policy)
+
+    assert result.returncode == 0, result.stdout
+    assert "EMAIL" not in result.stdout
+
+
+@pytest.mark.parametrize("policy", ["deny_all", "deny_secrets_and_pii"])
+def test_non_synthetic_phone_still_fires(tmp_path: Path, policy: str) -> None:
+    sample = tmp_path / "realish_phone.txt"
+    sample.write_text("mobile 9876543210\n", encoding="utf-8")
+
+    result = run_scan(tmp_path, policy)
+
+    assert result.returncode == 1
+    assert "PHONE_IN" in result.stdout
+
+
+@pytest.mark.parametrize("policy", ["deny_all", "deny_secrets_and_pii"])
+def test_non_synthetic_email_same_tld_still_fires(tmp_path: Path, policy: str) -> None:
+    sample = tmp_path / "other_email.txt"
+    sample.write_text("email other@example.invalid\n", encoding="utf-8")
+
+    result = run_scan(tmp_path, policy)
+
+    assert result.returncode == 1
+    assert "EMAIL" in result.stdout
+
+
+@pytest.mark.parametrize("policy", ["deny_all", "deny_secrets_and_pii"])
+def test_mixed_synthetic_and_real_phone_still_fires(
+    tmp_path: Path, policy: str
+) -> None:
+    sample = tmp_path / "mixed_phones.txt"
+    sample.write_text("contact 9000090000\nmobile 9876543210\n", encoding="utf-8")
+
+    result = run_scan(tmp_path, policy)
+
+    assert result.returncode == 1
+    assert "PHONE_IN" in result.stdout
+
+
+@pytest.mark.parametrize("policy", ["deny_all", "deny_secrets_and_pii"])
+def test_prefixed_synthetic_email_still_fires(tmp_path: Path, policy: str) -> None:
+    sample = tmp_path / "prefixed_email.txt"
+    sample.write_text("email xbuyer@example.invalid\n", encoding="utf-8")
+
+    result = run_scan(tmp_path, policy)
+
+    assert result.returncode == 1
+    assert "EMAIL" in result.stdout
+
+
+@pytest.mark.parametrize("policy", ["deny_all", "deny_secrets_and_pii"])
+def test_uppercase_synthetic_email_still_fires(tmp_path: Path, policy: str) -> None:
+    sample = tmp_path / "uppercase_email.txt"
+    sample.write_text("email BUYER@EXAMPLE.INVALID\n", encoding="utf-8")
+
+    result = run_scan(tmp_path, policy)
+
+    assert result.returncode == 1
+    assert "EMAIL" in result.stdout
+
+
+@pytest.mark.parametrize("policy", ["deny_all", "deny_secrets_and_pii"])
+def test_near_synthetic_phone_still_fires(tmp_path: Path, policy: str) -> None:
+    sample = tmp_path / "near_synthetic_phone.txt"
+    sample.write_text("mobile 9000090001\n", encoding="utf-8")
+
+    result = run_scan(tmp_path, policy)
+
+    assert result.returncode == 1
+    assert "PHONE_IN" in result.stdout
+
+
 def test_allowlist_entries_require_non_empty_reason() -> None:
     for _literal, _path, reason in check_identifiers.ALLOWLIST:
         assert reason
