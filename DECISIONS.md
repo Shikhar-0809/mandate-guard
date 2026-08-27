@@ -46,3 +46,15 @@ logged here so the deviation is visible rather than silent.
 Rejected: pulling the Makefile forward onto Windows ahead of the planned
 WSL2 migration; and ignoring the rule without recording it.
 Revisit: EXPIRES at Step 7. Delete this entry's applicability then.
+
+## D005 — Checkout capture is browser-driven; the fixture is the redacted API object
+Date: 2026-08-27
+Context: test-mode Checkout has no server-side payment path on an
+unactivated account — same class of gate as D001. The browser handler
+payload carries three fields and no payment state.
+Choice: capture via a loopback Checkout page, verify the signature, fetch
+the authoritative payment object, and commit it through an allowlist
+redactor.
+Rejected: S2S payment creation (not enabled); committing the raw fetched
+object, which carries email, contact, card.last4 and acquirer_data.rrn.
+Revisit: if S2S is enabled on the account.
