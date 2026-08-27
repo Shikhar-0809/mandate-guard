@@ -1,0 +1,14 @@
+{
+  "amount": 250000,
+  "amount_due": 250000,
+  "amount_paid": 0,
+  "attempts": 0,
+  "created_at": 1787842200,
+  "currency": "INR",
+  "entity": "order",
+  "id": "order_TUphkNLUdCn8t3",
+  "notes": [],
+  "offer_id": null,
+  "receipt": "mandate-guard-smoke-001",
+  "status": "created"
+}
