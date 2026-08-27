@@ -4,11 +4,17 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 from pathlib import Path
+from typing import Any
 
 import razorpay
 from dotenv import load_dotenv
+from razorpay.errors import (
+    BadRequestError,
+    GatewayError,
+    ServerError,
+    SignatureVerificationError,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 FIXTURES_DIR = PROJECT_ROOT / "fixtures"
@@ -44,7 +50,7 @@ def load_credentials() -> tuple[str, str]:
     return key_id, key_secret
 
 
-def write_fixture(name: str, payload: dict) -> None:
+def write_fixture(name: str, payload: dict[str, Any]) -> None:
     FIXTURES_DIR.mkdir(parents=True, exist_ok=True)
     path = FIXTURES_DIR / name
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
@@ -80,7 +86,12 @@ def check_mandate(client: razorpay.Client) -> None:
                 "total_count": SUBSCRIPTION_TOTAL_COUNT,
             }
         )
-    except Exception as exc:
+    except (
+        BadRequestError,
+        GatewayError,
+        ServerError,
+        SignatureVerificationError,
+    ) as exc:
         print(f"GATED mandate: {type(exc).__name__}: {exc}")
         return
 

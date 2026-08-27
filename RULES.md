@@ -63,7 +63,11 @@
 33. A doc updated in a separate commit from the code it describes does not count. Same diff.
 
 ## Safety scope
-34. No attack payload text outside sandbox/ fixtures. `make check` greps data/ for real VPAs,
-    merchant IDs, bank identifiers, and URLs.
+34. No attack payload text outside `sandbox/` fixtures.
+    `scripts/check_identifiers.py` scans `data/` under DENY_ALL and `fixtures/`
+    under DENY_SECRETS_AND_PII; the policy table lives in that module's
+    docstring. It runs standalone until Step 7 wires it into `make check`.
+    A suppression requires an exact-literal ALLOWLIST entry with a reason
+    string and a DECISIONS.md entry.
 35. The generator emits only against sandbox/. Any target outside sandbox/ is a failing test.
 36. No evasion or bypass analysis in this repository, in any framing.
