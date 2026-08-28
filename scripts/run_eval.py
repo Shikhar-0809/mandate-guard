@@ -29,7 +29,7 @@ from mandate_guard.eval import (
     precision_vs_prevalence,
     recall_on_records,
     score_baseline,
-    score_t1,
+    score_t0_t1,
 )
 
 BASELINE_NAMES: tuple[BaselineName, ...] = (
@@ -86,7 +86,7 @@ def main() -> None:
     for name in BASELINE_NAMES:
         baseline_scores[name] = [score_baseline(name, record) for record in dev_records]
 
-    t1_scores = [score_t1(record, args.model_dir) for record in dev_records]
+    t1_scores = [score_t0_t1(record, args.model_dir) for record in dev_records]
     tau_star, _ = find_cost_optimal_threshold(dev_records, t1_scores)
 
     baseline_threshold = 0.5
@@ -105,11 +105,11 @@ def main() -> None:
         record for record in dev_records if str(record["label"]) == "BLOCK"
     ]
     dev_attack_scores = [
-        score_t1(record, args.model_dir) for record in dev_attack_records
+        score_t0_t1(record, args.model_dir) for record in dev_attack_records
     ]
     recall_seen = recall_on_records(dev_attack_records, dev_attack_scores, tau_star)
 
-    sealed_scores = [score_t1(record, args.model_dir) for record in sealed_records]
+    sealed_scores = [score_t0_t1(record, args.model_dir) for record in sealed_records]
     recall_unseen = recall_on_records(sealed_records, sealed_scores, tau_star)
 
     curve = precision_vs_prevalence(dev_records, t1_scores, tau_star)
@@ -131,7 +131,7 @@ def main() -> None:
     print(f"{'':28} prec@prior  recall   fpr_hn   pr_auc   cost/10k")
     for name in BASELINE_NAMES:
         print(_format_metrics_row(name, baseline_metrics[name]))
-    print(_format_metrics_row("T1 (at τ*)", t1_metrics))
+    print(_format_metrics_row("T0+T1 (at τ*)", t1_metrics))
     print()
     print("--- Recall split ---")
     print(f"recall_seen  (dev  families 1-7): {recall_seen:.4f}")

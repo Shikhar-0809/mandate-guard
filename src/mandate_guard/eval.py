@@ -208,6 +208,21 @@ def score_t1(record: dict[str, object], model_dir: Path) -> float:
     )
 
 
+def score_t0_t1(record: dict[str, object], model_dir: Path) -> float:
+    """
+    Combined T0+T1 cascade score.
+
+    T0 is a hard gate: if T0 fires, return 1.0 immediately.
+    T1 provides signal only when T0 passes.
+    This matches the architecture invariant: T0 violations are
+    deterministic BLOCK regardless of T1 score.
+    """
+    t0_score = score_baseline("t0_only", record)
+    if t0_score == 1.0:
+        return 1.0
+    return score_t1(record, model_dir)
+
+
 def compute_metrics(
     records: list[dict[str, object]],
     scores: list[float],
