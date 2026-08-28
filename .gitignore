@@ -9,3 +9,4 @@ __pycache__/
 captures/
 models/*.joblib
 models/*.json
+eval_outputs/*.json
