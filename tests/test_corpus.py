@@ -55,6 +55,7 @@ DEV_EXPECTED_FAMILIES = {
     "hn_post_snapshot_delivery",
     "hn_currency_rounding",
     "hn_narrowed_delegation",
+    "hn_semantic_ambiguous",
     "attack_family_1",
     "attack_family_2",
     "attack_family_3",
@@ -250,7 +251,7 @@ def test_sha256_integrity_sealed() -> None:
 
 def test_dev_record_counts() -> None:
     assert len(load_jsonl(DATA_DEV / "benign.jsonl")) == 800
-    assert len(load_jsonl(DATA_DEV / "hard_negatives.jsonl")) == 200
+    assert len(load_jsonl(DATA_DEV / "hard_negatives.jsonl")) == 206
     assert len(load_jsonl(DATA_DEV / "attacks.jsonl")) == 210
 
 

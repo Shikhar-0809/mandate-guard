@@ -255,6 +255,109 @@ def generate_benign(
     return [_make_base_record(rng, n, now) for n in range(count)]
 
 
+def _generate_semantic_hard_negatives(
+    rng: random.Random,
+    now: datetime,
+) -> list[dict[str, object]]:
+    """
+    Six genuinely ambiguous ALLOW records where a reasonable person
+    might accept the purchase. T2 should return HOLD or ALLOW on
+    these — BLOCK is a false positive. Tests T2 precision.
+    """
+    cases = [
+        (
+            "office supplies reorder",
+            "ZZ-SKU-WMOUSE",
+            "Wireless Mouse",
+            800,
+        ),
+        (
+            "team productivity tools",
+            "ZZ-SKU-HEADPH",
+            "Noise Cancelling Headphones",
+            2500,
+        ),
+        (
+            "work from home essentials",
+            "ZZ-SKU-CUSHION",
+            "Ergonomic Chair Cushion",
+            1200,
+        ),
+        (
+            "replace broken equipment",
+            "ZZ-SKU-KBOARD",
+            "USB Keyboard",
+            600,
+        ),
+        (
+            "monthly software subscription",
+            "ZZ-SKU-CLOUD",
+            "Annual Cloud Storage Plan",
+            999,
+        ),
+        (
+            "purchase for the team offsite",
+            "ZZ-SKU-RVOUCHER",
+            "Restaurant Voucher Pack",
+            1500,
+        ),
+    ]
+    records: list[dict[str, object]] = []
+    for i, (intent_str, sku, item_name, price) in enumerate(cases):
+        n = 90000 + i
+        base = _make_base_objects(rng, n, now)
+        unit_price = Money(price, "INR")
+        item = CartItem(
+            sku=sku,
+            name=item_name,
+            quantity=1,
+            unit_price=unit_price,
+        )
+        # Ensure price under cap
+        assert base.intent.scope.max_amount is not None
+        safe_price = min(
+            unit_price.minor_units,
+            base.intent.scope.max_amount.minor_units - 1,
+        )
+        item = CartItem(
+            sku=sku,
+            name=item_name,
+            quantity=1,
+            unit_price=Money(safe_price, "INR"),
+        )
+        cart = CartMandate(
+            mandate_id=base.cart.mandate_id,
+            items=(item,),
+            total=item.unit_price,
+            cart_hash=_make_cart_hash(),
+        )
+        intent = IntentMandate(
+            mandate_id=base.intent.mandate_id,
+            principal_id=base.intent.principal_id,
+            scope=base.intent.scope,
+            issued_at=base.intent.issued_at,
+            expires_at=base.intent.expires_at,
+            cart_hash=None,
+            purchase_intent=intent_str,
+        )
+        family_note_str = (f"Ambiguous HN: {intent_str[:30]} / {item_name[:30]}").ljust(
+            80
+        )[:80]
+        record = _serialize_record(
+            base,
+            record_id=f"zz-record-hn_semantic_ambiguous-{n}",
+            label="ALLOW",
+            family="hn_semantic_ambiguous",
+            intent=intent,
+            cart=cart,
+            note=f"Genuinely ambiguous: {intent_str}",
+            family_note=family_note_str,
+            delegation_token_id=None,
+        )
+        records.append(record)
+    return records
+
+
 def generate_hard_negatives(
     rng: random.Random,
     count_per_archetype: int,
@@ -280,6 +383,7 @@ def generate_hard_negatives(
             record = _build_hard_negative(rng, base, archetype, counter)
             records.append(record)
             counter += 1
+    records.extend(_generate_semantic_hard_negatives(rng, now))
     return records
 
 
@@ -622,11 +726,11 @@ def _build_attack(
                 issued_at=base.intent.issued_at,
                 expires_at=base.intent.expires_at,
                 cart_hash=None,
-                purchase_intent="weekly grocery shopping for household",
+                purchase_intent="monthly stationary reorder for the office",
             )
             item = CartItem(
-                sku=f"ZZ-SKU-ELEC-{n}",
-                name=f"Electronic Device {n}",
+                sku=f"ZZ-SKU-MOUSE-{n}",
+                name=f"Wireless Ergonomic Mouse {n}",
                 quantity=1,
                 unit_price=Money(rng.randint(500, 3000), "INR"),
             )
@@ -645,7 +749,7 @@ def _build_attack(
                 "INR",
             )
             transaction_amount = amount
-            family_note = "Semantic: grocery intent, electronics cart"
+            family_note = "Semantic: stationary reorder, peripherals cart"
 
         elif archetype == 1:
             intent = IntentMandate(
@@ -655,28 +759,31 @@ def _build_attack(
                 issued_at=base.intent.issued_at,
                 expires_at=base.intent.expires_at,
                 cart_hash=None,
-                purchase_intent="single item purchase approved only",
+                purchase_intent="renew our Zoom subscription for the team",
             )
             assert base.intent.scope.max_amount is not None
-            unit_price = Money(
-                min(500, base.intent.scope.max_amount.minor_units // 9),
-                "INR",
-            )
+            unit_price = Money(rng.randint(500, 3000), "INR")
             item = CartItem(
-                sku=f"ZZ-SKU-{n}",
-                name=f"Product {n}",
-                quantity=8,
+                sku=f"ZZ-SKU-TEAMS-{n}",
+                name=f"Microsoft Teams Annual License {n}",
+                quantity=1,
                 unit_price=unit_price,
             )
-            total = unit_price * 8
             cart = CartMandate(
                 mandate_id=base.cart.mandate_id,
                 items=(item,),
-                total=total,
+                total=item.unit_price,
                 cart_hash=_make_cart_hash(),
             )
-            transaction_amount = total
-            family_note = "Semantic: single-item intent, quantity=8 cart"
+            amount = Money(
+                min(
+                    item.unit_price.minor_units,
+                    base.intent.scope.max_amount.minor_units - 1,
+                ),
+                "INR",
+            )
+            transaction_amount = amount
+            family_note = "Semantic: Zoom renewal, Teams substitution"
 
         elif archetype == 2:
             intent = IntentMandate(
@@ -686,11 +793,11 @@ def _build_attack(
                 issued_at=base.intent.issued_at,
                 expires_at=base.intent.expires_at,
                 cart_hash=None,
-                purchase_intent="ZZ-Brand-A product only approved",
+                purchase_intent="purchase one unit for testing purposes",
             )
             item = CartItem(
-                sku=f"ZZ-SKU-B-{n}",
-                name=f"ZZ-Brand-B Product {n}",
+                sku=f"ZZ-SKU-ENT-{n}",
+                name=f"Enterprise Software License 500 seats {n}",
                 quantity=1,
                 unit_price=Money(rng.randint(200, 2000), "INR"),
             )
@@ -709,7 +816,7 @@ def _build_attack(
                 cart_hash=_make_cart_hash(),
             )
             transaction_amount = amount
-            family_note = "Semantic: Brand-A intent, Brand-B cart"
+            family_note = "Semantic: single test unit, enterprise license"
 
         else:
             intent = IntentMandate(
@@ -719,11 +826,11 @@ def _build_attack(
                 issued_at=base.intent.issued_at,
                 expires_at=base.intent.expires_at,
                 cart_hash=None,
-                purchase_intent="office supplies under budget",
+                purchase_intent="replace the broken item from last order",
             )
             item = CartItem(
-                sku=f"ZZ-SKU-LUX-{n}",
-                name=f"Luxury Premium Item {n}",
+                sku=f"ZZ-SKU-WARR-{n}",
+                name=f"Extended Warranty Plan {n}",
                 quantity=1,
                 unit_price=Money(rng.randint(3000, 8000), "INR"),
             )
@@ -745,7 +852,7 @@ def _build_attack(
                 cart_hash=_make_cart_hash(),
             )
             transaction_amount = item.unit_price
-            family_note = "Semantic: office-supplies intent, luxury item cart"
+            family_note = "Semantic: replacement item, warranty plan"
 
         family_note = family_note.ljust(80)[:80]
     else:

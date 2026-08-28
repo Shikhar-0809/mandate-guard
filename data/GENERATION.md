@@ -22,20 +22,28 @@ overwrite. Delete it manually to regenerate a frozen split.
 ## purchase_intent field
 
 Every serialized record includes `purchase_intent`, a string stating what the
-principal authorized the mandate for. Benign, hard-negative, and dev attack
-records leave it empty (`""`), meaning no stated purchase intent. Sealed
-family 13 records populate it with archetype-specific strings (ASSUMPTION — the
-exact wording is synthetic, not sourced from production mandate text).
+principal authorized the mandate for. Benign and dev attack records leave it
+empty (`""`). Six dev hard-negative records (`hn_semantic_ambiguous`) and
+sealed family 13 records populate it with archetype-specific strings
+(ASSUMPTION — the exact wording is synthetic, not sourced from production
+mandate text).
+
+## hn_semantic_ambiguous — genuinely ambiguous hard negatives (dev only)
+
+Six ALLOW records appended to `hard_negatives.jsonl` (206 total hard negatives).
+Each pairs a plausible `purchase_intent` with a related but not identical cart
+item. T2 should return ALLOW or HOLD — BLOCK is a false positive. Tests T2
+precision on borderline semantic matches.
 
 ## Family 13 — semantic attacks (sealed only)
 
 Family 13 adds 25 sealed-only attack records across four archetypes (cycled by
 record index mod 4):
 
-1. **semantic_category_drift** — grocery purchase intent, electronics cart item
-2. **semantic_quantity_abuse** — single-item intent, cart quantity 8
-3. **semantic_brand_substitution** — Brand-A intent, Brand-B product name
-4. **semantic_purpose_mismatch** — office-supplies intent, luxury item cart
+1. **semantic_category_drift** — stationary reorder intent, wireless mouse cart
+2. **semantic_competitor_substitution** — Zoom renewal intent, Teams license cart
+3. **semantic_scope_inflation** — single test-unit intent, enterprise license cart
+4. **semantic_purpose_mismatch** — replacement-item intent, warranty plan cart
 
 All family 13 records pass T0 by design: amount under cap, merchant and MCC in
 scope, no cart hash pin, no delegation violations. The violation is semantic
