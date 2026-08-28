@@ -73,3 +73,15 @@ substring or case-insensitive matching — both would suppress a real address
 that merely contains or case-varies the synthetic one.
 Revisit: if SYNTHETIC_CONTACTS exceeds ~5 entries, or if any entry is not
 a literal hardcoded in the harness.
+
+## D007 — CHALLENGE verdict state removed
+Date: 2026-08-28
+Context: ARCHITECTURE specified ALLOW/HOLD/CHALLENGE/BLOCK. No challenge
+flow exists or will be built before submission. HOLD covers the deferral
+case. A state with no implementation creates a panel question with no
+answer.
+Choice: Three-way verdict: ALLOW/HOLD/BLOCK. Enforced in VerdictState
+enum in contracts/verdict.py (phase1-step2).
+Rejected: Keeping CHALLENGE as a documented future state — inflates
+apparent scope without adding demonstrable value.
+Revisit: If a real re-authentication or step-up flow is built.

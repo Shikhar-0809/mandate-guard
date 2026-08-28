@@ -25,6 +25,10 @@ T0 checks: amount vs per-txn cap, cumulative vs period cap, beneficiary in
 allowlist, MCC allowed, mandate active and in window, pre-debit notification
 satisfied, cart manifest hash matches approved snapshot, delegation scope
 monotonicity.
+T0 covers three concept classes: authorization violations (expiry,
+amount, beneficiary, category), integrity violations (cart hash),
+and structural delegation violations (scope expansion, mandate ID).
+Behavioral/semantic risk at the content level is T1/T2 territory.
 
 T1 runs on 100% deliberately — a censored score distribution blinds drift monitors.
 
@@ -54,9 +58,10 @@ never reaches T2; arithmetic does not need a language model.
 10. Every field in a log or audit envelope is schema-declared with a `pii` class.
 
 ## Verdicts
-`ALLOW` / `HOLD` / `CHALLENGE` / `BLOCK`. Three-way rather than binary because
-HOLD costs ~₹45 against BLOCK at ~₹320 — the deferral window is a property of
-the rail, so exploit it.
+`ALLOW` / `HOLD` / `BLOCK`. Three-way rather than binary because HOLD
+costs ~₹45 against BLOCK at ~₹320 — the deferral window is a property of
+the rail, so exploit it. CHALLENGE is absent: no challenge flow exists or
+will be built; HOLD is the correct deferral state.
 
 ## Cost matrix
 All inputs are ASSUMPTIONS until cited in `config/cost_model.yaml`.
