@@ -37,6 +37,7 @@ FEATURE_NAMES: tuple[str, ...] = (
     "mandate_id_match",
     "t0_passed",
     "t0_trigger_count",
+    "intent_cart_name_overlap",
 )
 
 
@@ -136,6 +137,20 @@ def extract_features(
         t0_passed,
         t0_trigger_count,
     ]
+
+    if not intent.purchase_intent:
+        intent_cart_overlap = -1.0
+    else:
+        intent_tokens = set(intent.purchase_intent.lower().split())
+        cart_text = " ".join(item.name.lower() for item in cart.items)
+        cart_tokens = set(cart_text.split())
+        if not intent_tokens:
+            intent_cart_overlap = -1.0
+        else:
+            matched = intent_tokens & cart_tokens
+            intent_cart_overlap = len(matched) / len(intent_tokens)
+
+    features.append(intent_cart_overlap)
 
     assert len(features) == len(FEATURE_NAMES), (
         f"feature count mismatch: {len(features)} != {len(FEATURE_NAMES)}"

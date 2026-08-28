@@ -22,6 +22,7 @@ if str(SRC) not in sys.path:
 
 from mandate_guard.eval import (
     BaselineName,
+    _record_to_t0_args,
     _verify_sha256,
     compute_metrics,
     find_cost_optimal_threshold,
@@ -70,6 +71,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Run mandate-guard evaluation")
     parser.add_argument("--model-dir", type=Path, default=Path("models/"))
     parser.add_argument("--prior", type=float, default=0.008)
+    parser.add_argument(
+        "--enable-t2",
+        action="store_true",
+        default=False,
+        help="Run T2 Ollama verifier on eligible sealed records",
+    )
     args = parser.parse_args()
 
     dev_dir = PROJECT_ROOT / "data" / "dev"
@@ -170,6 +177,68 @@ def main() -> None:
     eval_outputs_dir.mkdir(parents=True, exist_ok=True)
     curve_path = eval_outputs_dir / "precision_vs_prevalence.json"
     curve_path.write_text(json.dumps(curve, indent=2), encoding="utf-8")
+
+    if args.enable_t2:
+        from contracts import T2Config
+        from mandate_guard.t2 import verify as t2_verify
+
+        t2_config = T2Config(t2_enabled=True)
+        model_dir = args.model_dir
+
+        sealed_records = load_sealed_attacks(sealed_dir)
+        sealed_scores_t2: list[float] = []
+        t2_invoked = 0
+        t2_blocked = 0
+
+        for record in sealed_records:
+            base_score = score_t0_t1(record, model_dir)
+            purchase_intent = str(record.get("purchase_intent", ""))
+
+            if base_score < 1.0 and purchase_intent:
+                args_dict = _record_to_t0_args(record)
+                intent_obj = args_dict["intent"]
+                cart_obj = args_dict["cart"]
+                result = t2_verify(
+                    intent_obj,
+                    cart_obj,
+                    None,
+                    None,
+                    t2_config,
+                )
+                t2_invoked += 1
+                if result.invoked and result.verdict.value == "BLOCK":
+                    sealed_scores_t2.append(1.0)
+                    t2_blocked += 1
+                else:
+                    sealed_scores_t2.append(base_score)
+            else:
+                sealed_scores_t2.append(base_score)
+
+        recall_unseen_t2 = recall_on_records(sealed_records, sealed_scores_t2, tau_star)
+        lift = recall_unseen_t2 - recall_unseen
+        criterion_met = lift >= 0.02
+
+        print("\n--- T2 evaluation (Ollama: qwen2.5:7b) ---")
+        print(f"T2 gate invocations: {t2_invoked}")
+        print(f"T2 blocked:          {t2_blocked}")
+        print(f"recall_unseen T0+T1:     {recall_unseen:.4f}")
+        print(f"recall_unseen T0+T1+T2:  {recall_unseen_t2:.4f}")
+        print(f"Lift:                    {lift:+.4f}")
+        print(f"Kill criterion (>=+0.02): {'MET' if criterion_met else 'NOT MET'}")
+        if criterion_met:
+            print("T2 EARNS ITS PLACE — update T2Config default to enabled.")
+        else:
+            print("T2 stays degraded — D008 stands.")
+
+        bl_path = PROJECT_ROOT / "baselines.json"
+        bl = json.loads(bl_path.read_text(encoding="utf-8"))
+        bl["eval_recall_unseen_t2"] = recall_unseen_t2
+        bl["eval_t2_lift"] = lift
+        bl["eval_t2_kill_criterion_met"] = criterion_met
+        bl["eval_t2_invocations"] = t2_invoked
+        bl["eval_t2_blocked"] = t2_blocked
+        bl_path.write_text(json.dumps(bl, indent=2), encoding="utf-8")
+        print("\nbaselines.json updated with T2 results.")
 
 
 if __name__ == "__main__":

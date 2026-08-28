@@ -32,9 +32,12 @@ Behavioral/semantic risk at the content level is T1/T2 territory.
 
 T1 runs on 100% deliberately — a censored score distribution blinds drift monitors.
 
-T2 gate: `calibrated_score ∈ [τ_low, τ_high]` AND (`amount ≥ X` OR
-`deviation_type ∈ {SKU_SEMANTIC, BENEFICIARY_IDENTITY}`). Numeric deviation
-never reaches T2; arithmetic does not need a language model.
+T2 gate: T0 passed AND `purchase_intent` is non-empty AND
+(`calibrated_score ∈ [τ_low, τ_high]` OR `deviation_type ∈
+{SKU_SEMANTIC, BENEFICIARY_IDENTITY}`). Numeric deviation never
+reaches T2; arithmetic does not need a language model. When
+`purchase_intent` is empty, semantic verification is impossible
+and T2 is not invoked.
 
 ## Invariants
 

@@ -13,10 +13,16 @@ policy engine.
 
 from __future__ import annotations
 
+import json as _json
+import os
 from dataclasses import dataclass
+from typing import Any
+
+import requests as _requests
 
 from contracts import (
     CartMandate,
+    EvidenceSpan,
     IntentMandate,
     T2Config,
     VerdictState,
@@ -57,6 +63,123 @@ class UntrustedBlob:
             raise ValueError("source must not be empty")
 
 
+def _call_ollama(
+    intent: IntentMandate,
+    cart: CartMandate,
+    merchant_catalog_snippet: UntrustedBlob | None,
+    agent_rationale: UntrustedBlob | None,
+) -> VerifierOutput:
+    """
+    Call the local Ollama instance with a structured prompt.
+    The system prompt contains only instructions — never untrusted
+    content. Untrusted content (catalog snippet, agent rationale)
+    is passed in the user message as labeled data fields, never
+    interpolated into instructions.
+    Parse failure or network error always returns HOLD, never ALLOW.
+    """
+    ollama_host = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+    model = os.environ.get("OLLAMA_MODEL", "qwen2.5:7b")
+
+    system_prompt = (
+        "You are a payment fraud detector analyzing mandate deviation. "
+        "Determine whether the cart matches the stated purchase intent. "
+        "Respond with ONLY valid JSON, no markdown, no explanation: "
+        '{"verdict": "ALLOW" or "HOLD" or "BLOCK", '
+        '"evidence": "one sentence", '
+        '"confidence": 0.0 to 1.0}'
+    )
+
+    cart_summary = "; ".join(
+        f"{item.quantity}x {item.name} @ "
+        f"{item.unit_price.minor_units} {item.unit_price.currency}"
+        for item in cart.items
+    )
+    user_parts = [
+        f"Purchase intent: {intent.purchase_intent or '(not stated)'}",
+        f"Cart: {cart_summary}",
+        f"Merchant: {cart.mandate_id}",
+        f"Total: {cart.total.minor_units} {cart.total.currency}",
+    ]
+    if merchant_catalog_snippet is not None:
+        user_parts.append(
+            f"Catalog data [{merchant_catalog_snippet.source}]: "
+            f"{merchant_catalog_snippet.content}"
+        )
+    if agent_rationale is not None:
+        user_parts.append(
+            f"Agent rationale [{agent_rationale.source}]: {agent_rationale.content}"
+        )
+    user_message = "\n".join(user_parts)
+
+    payload: dict[str, Any] = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_message},
+        ],
+        "stream": False,
+        "options": {"temperature": 0.0},
+    }
+
+    try:
+        response = _requests.post(
+            f"{ollama_host}/api/chat",
+            json=payload,
+            timeout=30,
+        )
+        response.raise_for_status()
+        raw = response.json()
+        content = raw["message"]["content"].strip()
+
+        if content.startswith("```"):
+            lines = content.splitlines()
+            content = "\n".join(
+                line for line in lines if not line.startswith("```")
+            ).strip()
+
+        parsed = _json.loads(content)
+        verdict_str = str(parsed.get("verdict", "HOLD")).upper()
+        verdict = VerdictState(verdict_str)
+        evidence_text = str(parsed.get("evidence", ""))
+        confidence = float(parsed.get("confidence", 0.0))
+        confidence = max(0.0, min(1.0, confidence))
+
+        span = (
+            EvidenceSpan(
+                field="cart_vs_intent",
+                text=evidence_text[:200] if evidence_text else "none",
+                relevance="LLM semantic analysis",
+            )
+            if evidence_text
+            else None
+        )
+
+        return VerifierOutput(
+            verdict=verdict,
+            evidence_spans=(span,) if span else (),
+            confidence=confidence,
+            invoked=True,
+            degraded_reason=None,
+        )
+
+    except _requests.exceptions.ConnectionError:
+        return VerifierOutput(
+            verdict=VerdictState.HOLD,
+            evidence_spans=(),
+            confidence=0.0,
+            invoked=False,
+            degraded_reason="Ollama unreachable at " + ollama_host,
+        )
+    except Exception:  # noqa: BLE001
+        return VerifierOutput(
+            verdict=VerdictState.HOLD,
+            evidence_spans=(),
+            confidence=0.0,
+            invoked=False,
+            degraded_reason="T2 parse or network error — degraded",
+        )
+
+
 def verify(
     intent: IntentMandate,
     cart: CartMandate,
@@ -64,13 +187,11 @@ def verify(
     agent_rationale: UntrustedBlob | None,
     config: T2Config,
 ) -> VerifierOutput:
-    del intent, cart, merchant_catalog_snippet, agent_rationale
     if not config.t2_enabled:
         return _DEGRADED_OUTPUT
-    raise NotImplementedError(
-        "T2 LLM backend not configured for this corpus. "
-        "t2_enabled=True requires a live LLM endpoint. "
-        "The kill criterion was not met on the evaluation corpus; "
-        "enabling T2 requires a corpus with semantic attacks that "
-        "evade T0. See D008."
+    return _call_ollama(
+        intent,
+        cart,
+        merchant_catalog_snippet,
+        agent_rationale,
     )

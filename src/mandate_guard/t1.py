@@ -73,6 +73,7 @@ def _record_to_args(record: dict[str, object]) -> _FeatureInputs:
         issued_at=datetime.fromisoformat(str(record["intent_issued_at"])),
         expires_at=datetime.fromisoformat(str(record["intent_expires_at"])),
         cart_hash=record["intent_cart_hash"],  # type: ignore[arg-type]
+        purchase_intent=str(record.get("purchase_intent", "")),
     )
     cart_items = cast(list[dict[str, object]], record["cart_items"])
     items = tuple(

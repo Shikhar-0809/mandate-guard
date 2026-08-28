@@ -16,6 +16,7 @@ class IntentMandate:
     issued_at: datetime
     expires_at: datetime
     cart_hash: str | None = None
+    purchase_intent: str = ""
 
     def __post_init__(self) -> None:
         if not self.mandate_id:

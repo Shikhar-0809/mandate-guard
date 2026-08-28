@@ -100,3 +100,34 @@ component as a metrics win without evidence, violating the pre-
 registered criterion.
 Revisit: Extend corpus with semantic attacks that evade T0. Re-run
 eval. Enable T2 only if criterion is met.
+
+## D009 — qwen2.5:7b as T2 Ollama backend
+Date: 2026-08-29
+Context: T2 LLM backend requires a model that can reliably produce
+structured JSON output. Anthropic API costs money per call; an offline
+local model is preferred for reproducibility.
+Choice: qwen2.5:7b via Ollama at localhost:11434. Configurable via
+OLLAMA_HOST and OLLAMA_MODEL environment variables. Temperature=0.0
+for deterministic output. Parse failure always returns HOLD.
+Rejected: Anthropic API (cost, requires network); gemma3:1b (too
+small for reliable JSON schema adherence);
+qwen2.5vl:7b (vision model, text-only task).
+Revisit: If a hosted endpoint becomes available or a smaller model
+demonstrates equivalent JSON reliability.
+
+## D010 — T2 gate uses purchase_intent presence, not score band
+Date: 2026-08-29
+Context: T1 was trained on dev corpus where purchase_intent is always
+empty, so feature 22 (intent_cart_name_overlap) is always -1.0 on
+training data. T1 assigns no weight to feature 22 and scores all
+family 13 records 0.0 — none fall in the [0.3, 0.7] score band.
+Choice: T2 gate condition is T0-passed AND purchase_intent non-empty,
+replacing the score-band gate for semantic families. This is
+architecturally correct: T2 is the right tool for semantic intent
+verification; T1 handles statistical anomalies. When no intent is
+stated, semantic verification is impossible and T2 is not invoked.
+Rejected: Adding semantic dev examples to retrain T1 — adds corpus
+complexity and risks T1 absorbing the semantic signal, leaving T2
+with nothing to contribute.
+Revisit: If dev corpus is extended with purchase_intent examples
+and T1 learns feature 22, reintroduce score-band gate.

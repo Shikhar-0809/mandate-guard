@@ -91,3 +91,26 @@ def test_cart_hash_set_is_valid() -> None:
         cart_hash="abc123",
     )
     assert mandate.cart_hash == "abc123"
+
+
+def test_purchase_intent_default_is_empty() -> None:
+    mandate = IntentMandate(
+        mandate_id="zz-mandate-test",
+        principal_id="zz-principal-test",
+        scope=Scope(),
+        issued_at=datetime(2026, 1, 1),  # noqa: DTZ001
+        expires_at=datetime(2026, 12, 31),  # noqa: DTZ001
+    )
+    assert mandate.purchase_intent == ""
+
+
+def test_purchase_intent_non_empty_is_valid() -> None:
+    mandate = IntentMandate(
+        mandate_id="zz-mandate-test",
+        principal_id="zz-principal-test",
+        scope=Scope(),
+        issued_at=datetime(2026, 1, 1),  # noqa: DTZ001
+        expires_at=datetime(2026, 12, 31),  # noqa: DTZ001
+        purchase_intent="weekly grocery shopping for household",
+    )
+    assert mandate.purchase_intent == "weekly grocery shopping for household"

@@ -38,6 +38,7 @@ RECORD_FIELDS: tuple[str, ...] = (
     "intent_issued_at",
     "intent_expires_at",
     "intent_cart_hash",
+    "purchase_intent",
     "cart_mandate_id",
     "cart_items",
     "cart_total_minor_units",
@@ -138,6 +139,7 @@ def _serialize_record(
         "intent_issued_at": intent_obj.issued_at.isoformat(),
         "intent_expires_at": intent_obj.expires_at.isoformat(),
         "intent_cart_hash": intent_obj.cart_hash,
+        "purchase_intent": intent_obj.purchase_intent,
         "cart_mandate_id": cart_obj.mandate_id,
         "cart_items": cart_items,
         "cart_total_minor_units": cart_obj.total.minor_units,
@@ -154,7 +156,12 @@ def _serialize_record(
     return record
 
 
-def _rebuild_intent(base: BaseRecord, *, cart_hash: str | None) -> IntentMandate:
+def _rebuild_intent(
+    base: BaseRecord,
+    *,
+    cart_hash: str | None,
+    purchase_intent: str = "",
+) -> IntentMandate:
     return IntentMandate(
         mandate_id=base.intent.mandate_id,
         principal_id=base.intent.principal_id,
@@ -162,6 +169,7 @@ def _rebuild_intent(base: BaseRecord, *, cart_hash: str | None) -> IntentMandate
         issued_at=base.intent.issued_at,
         expires_at=base.intent.expires_at,
         cart_hash=cart_hash,
+        purchase_intent=purchase_intent,
     )
 
 
@@ -602,6 +610,144 @@ def _build_attack(
         if token.is_valid_delegation():
             raise ValueError(f"family 12 token unexpectedly valid for {n}")
         family_note = "Multi-hop delegation with scope expansion"
+    elif family_num == 13:
+        archetype = n % 4
+        intent = _rebuild_intent(base, cart_hash=None)
+
+        if archetype == 0:
+            intent = IntentMandate(
+                mandate_id=base.intent.mandate_id,
+                principal_id=base.intent.principal_id,
+                scope=base.intent.scope,
+                issued_at=base.intent.issued_at,
+                expires_at=base.intent.expires_at,
+                cart_hash=None,
+                purchase_intent="weekly grocery shopping for household",
+            )
+            item = CartItem(
+                sku=f"ZZ-SKU-ELEC-{n}",
+                name=f"Electronic Device {n}",
+                quantity=1,
+                unit_price=Money(rng.randint(500, 3000), "INR"),
+            )
+            cart = CartMandate(
+                mandate_id=base.cart.mandate_id,
+                items=(item,),
+                total=item.unit_price,
+                cart_hash=_make_cart_hash(),
+            )
+            assert base.intent.scope.max_amount is not None
+            amount = Money(
+                min(
+                    item.unit_price.minor_units,
+                    base.intent.scope.max_amount.minor_units - 1,
+                ),
+                "INR",
+            )
+            transaction_amount = amount
+            family_note = "Semantic: grocery intent, electronics cart"
+
+        elif archetype == 1:
+            intent = IntentMandate(
+                mandate_id=base.intent.mandate_id,
+                principal_id=base.intent.principal_id,
+                scope=base.intent.scope,
+                issued_at=base.intent.issued_at,
+                expires_at=base.intent.expires_at,
+                cart_hash=None,
+                purchase_intent="single item purchase approved only",
+            )
+            assert base.intent.scope.max_amount is not None
+            unit_price = Money(
+                min(500, base.intent.scope.max_amount.minor_units // 9),
+                "INR",
+            )
+            item = CartItem(
+                sku=f"ZZ-SKU-{n}",
+                name=f"Product {n}",
+                quantity=8,
+                unit_price=unit_price,
+            )
+            total = unit_price * 8
+            cart = CartMandate(
+                mandate_id=base.cart.mandate_id,
+                items=(item,),
+                total=total,
+                cart_hash=_make_cart_hash(),
+            )
+            transaction_amount = total
+            family_note = "Semantic: single-item intent, quantity=8 cart"
+
+        elif archetype == 2:
+            intent = IntentMandate(
+                mandate_id=base.intent.mandate_id,
+                principal_id=base.intent.principal_id,
+                scope=base.intent.scope,
+                issued_at=base.intent.issued_at,
+                expires_at=base.intent.expires_at,
+                cart_hash=None,
+                purchase_intent="ZZ-Brand-A product only approved",
+            )
+            item = CartItem(
+                sku=f"ZZ-SKU-B-{n}",
+                name=f"ZZ-Brand-B Product {n}",
+                quantity=1,
+                unit_price=Money(rng.randint(200, 2000), "INR"),
+            )
+            assert base.intent.scope.max_amount is not None
+            amount = Money(
+                min(
+                    item.unit_price.minor_units,
+                    base.intent.scope.max_amount.minor_units - 1,
+                ),
+                "INR",
+            )
+            cart = CartMandate(
+                mandate_id=base.cart.mandate_id,
+                items=(item,),
+                total=item.unit_price,
+                cart_hash=_make_cart_hash(),
+            )
+            transaction_amount = amount
+            family_note = "Semantic: Brand-A intent, Brand-B cart"
+
+        else:
+            intent = IntentMandate(
+                mandate_id=base.intent.mandate_id,
+                principal_id=base.intent.principal_id,
+                scope=base.intent.scope,
+                issued_at=base.intent.issued_at,
+                expires_at=base.intent.expires_at,
+                cart_hash=None,
+                purchase_intent="office supplies under budget",
+            )
+            item = CartItem(
+                sku=f"ZZ-SKU-LUX-{n}",
+                name=f"Luxury Premium Item {n}",
+                quantity=1,
+                unit_price=Money(rng.randint(3000, 8000), "INR"),
+            )
+            assert base.intent.scope.max_amount is not None
+            safe_price = min(
+                item.unit_price.minor_units,
+                base.intent.scope.max_amount.minor_units - 1,
+            )
+            item = CartItem(
+                sku=item.sku,
+                name=item.name,
+                quantity=1,
+                unit_price=Money(safe_price, "INR"),
+            )
+            cart = CartMandate(
+                mandate_id=base.cart.mandate_id,
+                items=(item,),
+                total=item.unit_price,
+                cart_hash=_make_cart_hash(),
+            )
+            transaction_amount = item.unit_price
+            family_note = "Semantic: office-supplies intent, luxury item cart"
+
+        family_note = family_note.ljust(80)[:80]
     else:
         raise ValueError(f"unknown attack family {family_num}")
 
@@ -693,7 +839,7 @@ def generate_corpus(split: str, output_dir: Path, now: datetime) -> None:
     elif split == "sealed":
         seed = 137
         rng = random.Random(seed)
-        attacks = generate_attacks(rng, 25, now, [8, 9, 10, 11, 12])
+        attacks = generate_attacks(rng, 25, now, [8, 9, 10, 11, 12, 13])
         files = {"attacks.jsonl": attacks}
     else:
         raise ValueError(f"unknown split {split!r}")

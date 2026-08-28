@@ -83,9 +83,18 @@ def test_degraded_reason_non_empty() -> None:
     assert len(result.degraded_reason) > 0
 
 
-def test_enabled_raises_not_implemented() -> None:
-    with pytest.raises(NotImplementedError):
-        verify(VALID_INTENT, VALID_CART, None, None, T2Config(t2_enabled=True))
+def test_enabled_calls_ollama_or_returns_hold() -> None:
+    """
+    When t2_enabled=True, verify() calls _call_ollama.
+    In CI without Ollama, _call_ollama returns a degraded HOLD
+    on ConnectionError. Either an invoked VerifierOutput or a
+    degraded HOLD is acceptable — what is NOT acceptable is ALLOW
+    on a connection failure.
+    """
+    result = verify(VALID_INTENT, VALID_CART, None, None, T2Config(t2_enabled=True))
+    if not result.invoked:
+        assert result.verdict == VerdictState.HOLD
+    assert isinstance(result, VerifierOutput)
 
 
 def test_verifier_output_invoked_false_nonempty_spans_raises() -> None:

@@ -70,6 +70,7 @@ SEALED_EXPECTED_FAMILIES = {
     "attack_family_10",
     "attack_family_11",
     "attack_family_12",
+    "attack_family_13",
 }
 
 
@@ -254,7 +255,7 @@ def test_dev_record_counts() -> None:
 
 
 def test_sealed_record_counts() -> None:
-    assert len(load_jsonl(DATA_SEALED / "attacks.jsonl")) == 125
+    assert len(load_jsonl(DATA_SEALED / "attacks.jsonl")) == 150
 
 
 def test_dev_attack_rate() -> None:

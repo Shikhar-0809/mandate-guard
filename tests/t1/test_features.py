@@ -60,7 +60,7 @@ def run_extract(**overrides: object) -> list[float]:
 
 def test_feature_count() -> None:
     features = run_extract()
-    assert len(features) == len(FEATURE_NAMES) == 21
+    assert len(features) == len(FEATURE_NAMES) == 22
 
 
 def test_all_finite() -> None:
