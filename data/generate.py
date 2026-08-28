@@ -148,7 +148,7 @@ def _serialize_record(
         "transaction_amount_minor_units": amount.minor_units,
         "transaction_amount_currency": amount.currency,
         "note": note,
-        "family_note": family_note,
+        "family_note": family_note.ljust(80)[:80],
         "delegation_token_id": delegation_token_id,
     }
     return record
@@ -234,6 +234,10 @@ def _make_base_record(rng: random.Random, n: int, now: datetime) -> dict[str, ob
         record_id=f"zz-record-benign-{n}",
         label="ALLOW",
         family="benign",
+        family_note=(
+            "Valid mandate: amount in cap, merchant/category in scope, "
+            "cart hash matches."
+        ),
     )
 
 
@@ -299,6 +303,10 @@ def _build_hard_negative(
             total=item.unit_price * item.quantity,
             cart_hash=base.cart.cart_hash,
         )
+        family_note = (
+            "Hard negative: SKU substituted post-approval, same "
+            "category/price, no hash pin."
+        )
     elif archetype == "hn_price_drift":
         assert base.intent.scope.max_amount is not None
         max_amount = base.intent.scope.max_amount
@@ -328,10 +336,16 @@ def _build_hard_negative(
             total=total,
             cart_hash=base.cart.cart_hash,
         )
+        family_note = (
+            "Hard negative: unit price up 2 percent, total remains under mandate cap."
+        )
     elif archetype == "hn_partial_capture":
         cart_total = base.cart.total.minor_units
         if cart_total > 50:
             transaction_amount = Money(rng.randint(50, cart_total - 1), "INR")
+        family_note = (
+            "Hard negative: amount below cart total, partial capture scenario."
+        )
     elif archetype == "hn_retry_fresh_idempotency":
         cart = CartMandate(
             mandate_id=base.cart.mandate_id,
@@ -340,6 +354,10 @@ def _build_hard_negative(
             cart_hash=_make_cart_hash(),
         )
         note = "Legitimate retry with fresh idempotency key"
+        family_note = (
+            "Hard negative: same cart, new hash, legitimate "
+            "retry with fresh idempotency key."
+        )
     elif archetype == "hn_basket_split":
         item = CartItem(
             sku=base.cart.items[0].sku,
@@ -354,14 +372,24 @@ def _build_hard_negative(
             cart_hash=base.cart.cart_hash,
         )
         note = "Legitimate basket split — one of two sub-carts"
+        family_note = (
+            "Hard negative: one approved cart item, legitimate basket split sub-cart."
+        )
     elif archetype == "hn_subscription_stepup":
         assert base.intent.scope.max_amount is not None
         bumped = base.transaction_amount + Money(rng.randint(100, 500), "INR")
         if bumped <= base.intent.scope.max_amount:
             transaction_amount = bumped
         note = "Subscription step-up within scope"
+        family_note = (
+            "Hard negative: amount increased within scope cap, subscription step-up."
+        )
     elif archetype == "hn_subsidiary_confusability":
         merchant_id = f"zz-merchant-electronics-{n}-subsidiary.test"
+        family_note = (
+            "Hard negative: subsidiary name confusable with "
+            "allowlisted parent, not in list."
+        )
     elif archetype == "hn_post_snapshot_delivery":
         assert base.intent.scope.max_amount is not None
         max_amount = base.intent.scope.max_amount
@@ -389,8 +417,15 @@ def _build_hard_negative(
             cart_hash=base.cart.cart_hash,
         )
         note = "Delivery fee added post-snapshot"
+        family_note = (
+            "Hard negative: delivery fee post-snapshot, "
+            "total remains within mandate cap."
+        )
     elif archetype == "hn_currency_rounding":
         transaction_amount = Money(base.cart.total.minor_units - 1, "INR")
+        family_note = (
+            "Hard negative: amount one minor unit below cart total, rounding artifact."
+        )
     elif archetype == "hn_narrowed_delegation":
         delegation_token_id = f"zz-token-{n}"
         token = DelegationToken(
@@ -407,6 +442,9 @@ def _build_hard_negative(
         )
         if not token.is_valid_delegation():
             raise ValueError(f"invalid narrowed delegation for record {n}")
+        family_note = (
+            "Hard negative: delegation correctly narrows scope to a single merchant."
+        )
 
     return _serialize_record(
         base,
@@ -501,7 +539,7 @@ def _build_attack(
         )
         if token.is_valid_delegation():
             raise ValueError(f"family 5 token unexpectedly valid for {n}")
-        family_note = "Delegation widens amount cap — scope expansion"
+        family_note = "Delegation widens amount cap - scope expansion"
     elif family_num == 6:
         cart = CartMandate(
             mandate_id=f"zz-mandate-WRONG-{n}",
@@ -611,9 +649,6 @@ def validate_generator_across_seeds(
         benign = generate_benign(rng, 800, now)
         hard_negatives = generate_hard_negatives(rng, 20, now)
         attacks = generate_attacks(rng, 30, now, [1, 2, 3, 4, 5, 6, 7])
-        all_dev = benign + hard_negatives + attacks
-        _spread_decoy_families(rng, all_dev)
-        _permute_provenance_fields(rng, all_dev)
         family_counts: dict[str, int] = {}
         hn_archetype_counts: dict[str, int] = {}
         for record in benign + hard_negatives + attacks:
@@ -637,87 +672,6 @@ def validate_generator_across_seeds(
     return summaries
 
 
-DELEGATION_FAMILIES = frozenset(
-    {
-        "hn_narrowed_delegation",
-        "attack_family_5",
-        "attack_family_12",
-    }
-)
-
-DECOY_FAMILIES: tuple[str, ...] = (
-    "hn_stockout_substitution",
-    "hn_price_drift",
-    "hn_partial_capture",
-    "hn_retry_fresh_idempotency",
-    "hn_basket_split",
-    "hn_subscription_stepup",
-    "hn_subsidiary_confusability",
-    "hn_post_snapshot_delivery",
-    "hn_currency_rounding",
-    "hn_narrowed_delegation",
-    "attack_family_1",
-    "attack_family_2",
-    "attack_family_3",
-    "attack_family_4",
-    "attack_family_5",
-    "attack_family_6",
-    "attack_family_7",
-)
-
-
-def _semantic_family_from_record_id(record_id: str) -> str:
-    body = record_id.removeprefix("zz-record-")
-    family, _, _n = body.rpartition("-")
-    return family
-
-
-def _spread_decoy_families(
-    rng: random.Random,
-    records: list[dict[str, object]],
-) -> None:
-    """Spread archetype family strings across labels before provenance shuffling."""
-    benign_records = [
-        record
-        for record in records
-        if str(record["record_id"]).startswith("zz-record-benign-")
-    ]
-    for idx, record in enumerate(benign_records):
-        record["family"] = DECOY_FAMILIES[idx % len(DECOY_FAMILIES)]
-
-    allow_only_families = (
-        "benign",
-        *tuple(family for family in DECOY_FAMILIES if family.startswith("hn_")),
-    )
-    block_pool = [
-        record
-        for record in records
-        if record["label"] == "BLOCK" and not record.get("delegation_token_id")
-    ]
-    rng.shuffle(block_pool)
-    for idx, record in enumerate(block_pool):
-        record["family"] = allow_only_families[idx % len(allow_only_families)]
-
-
-def _permute_provenance_fields(
-    rng: random.Random,
-    records: list[dict[str, object]],
-) -> None:
-    """Break label correlation in note/family metadata while preserving multiset."""
-    families = [str(record["family"]) for record in records]
-    notes = [str(record["note"]) for record in records]
-    rng.shuffle(families)
-    rng.shuffle(notes)
-    for record, family, note in zip(records, families, notes, strict=True):
-        record["family"] = family
-        record["note"] = note
-
-    for record in records:
-        semantic = _semantic_family_from_record_id(str(record["record_id"]))
-        if semantic in DELEGATION_FAMILIES and record.get("delegation_token_id"):
-            record["family"] = semantic
-
-
 def generate_corpus(split: str, output_dir: Path, now: datetime) -> None:
     sums_path = output_dir / "SHA256SUMS"
     if sums_path.exists():
@@ -731,9 +685,6 @@ def generate_corpus(split: str, output_dir: Path, now: datetime) -> None:
         benign = generate_benign(rng, 800, now)
         hard_negatives = generate_hard_negatives(rng, 20, now)
         attacks = generate_attacks(rng, 30, now, [1, 2, 3, 4, 5, 6, 7])
-        all_dev = benign + hard_negatives + attacks
-        _spread_decoy_families(rng, all_dev)
-        _permute_provenance_fields(rng, all_dev)
         files = {
             "benign.jsonl": benign,
             "hard_negatives.jsonl": hard_negatives,
@@ -743,7 +694,6 @@ def generate_corpus(split: str, output_dir: Path, now: datetime) -> None:
         seed = 137
         rng = random.Random(seed)
         attacks = generate_attacks(rng, 25, now, [8, 9, 10, 11, 12])
-        _permute_provenance_fields(rng, attacks)
         files = {"attacks.jsonl": attacks}
     else:
         raise ValueError(f"unknown split {split!r}")
