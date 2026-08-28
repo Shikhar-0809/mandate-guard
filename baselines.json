@@ -1,0 +1,9 @@
+{
+  "t1_auc": 1.0,
+  "t1_precision": 1.0,
+  "t1_recall": 1.0,
+  "t1_ece": 0.00015968435570268397,
+  "trained_on_n": 1210,
+  "holdout_n": 242,
+  "feature_count": 21
+}
