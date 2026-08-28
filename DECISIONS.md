@@ -85,3 +85,18 @@ enum in contracts/verdict.py (phase1-step2).
 Rejected: Keeping CHALLENGE as a documented future state — inflates
 apparent scope without adding demonstrable value.
 Revisit: If a real re-authentication or step-up flow is built.
+
+## D008 — T2 ships degraded by default
+Date: 2026-08-29
+Context: Pre-registered kill criterion in EVAL.md requires T2 to lift
+recall_unseen by >=2pp over T0+T1 on the dev set. T0 achieves
+recall_unseen=1.0 on the evaluation corpus, making the criterion
+mathematically impossible (would require recall_unseen>=1.02).
+Choice: T2 ships wired but degraded (T2Config.t2_enabled=False by
+default). Degraded path returns HOLD. Interface, output schema, and
+contract types are fully implemented and tested.
+Rejected: Enabling T2 regardless — would present an architecture
+component as a metrics win without evidence, violating the pre-
+registered criterion.
+Revisit: Extend corpus with semantic attacks that evade T0. Re-run
+eval. Enable T2 only if criterion is met.

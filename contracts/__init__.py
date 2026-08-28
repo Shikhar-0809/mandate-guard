@@ -5,6 +5,8 @@ from contracts.delegation_token import DelegationToken
 from contracts.intent_mandate import IntentMandate
 from contracts.money import Money
 from contracts.scope import Scope
+from contracts.t2_config import T2Config
+from contracts.verifier_output import EvidenceSpan, VerifierOutput
 from contracts.verdict import Verdict, VerdictState
 
 __all__ = [  # noqa: RUF022
@@ -17,4 +19,7 @@ __all__ = [  # noqa: RUF022
     "VerdictState",
     "Verdict",
     "AuditEnvelope",
+    "EvidenceSpan",
+    "VerifierOutput",
+    "T2Config",
 ]
