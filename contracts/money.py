@@ -45,3 +45,10 @@ class Money:
         if self.currency != other.currency:
             raise ValueError("currency mismatch")
         return self.minor_units >= other.minor_units
+
+    def __mul__(self, quantity: int) -> Money:
+        if not isinstance(quantity, int) or isinstance(quantity, bool):
+            raise TypeError(
+                f"Money can only be multiplied by int, got {type(quantity).__name__}"
+            )
+        return Money(self.minor_units * quantity, self.currency)
