@@ -219,12 +219,16 @@ def shuffled_label_auc(records: list[dict[str, object]]) -> list[float]:
 
 
 def provenance_probe_auc(records: list[dict[str, object]]) -> float:
+    # Probe features must be side-channel metadata, not label proxies.
+    # family and hash(family) are direct label encodings — using them
+    # defeats the probe's purpose. We use note length, family_note length,
+    # and amount cents-digit as proxies for generator routine artifacts.
     x = np.array(
         [
             [
                 len(str(record["note"])),
-                len(str(record["family"])),
-                hash(str(record["family"])) % 1000,
+                len(str(record["family_note"])),
+                int(record["transaction_amount_minor_units"]) % 100,
             ]
             for record in records
         ]
