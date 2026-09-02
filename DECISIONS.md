@@ -131,3 +131,31 @@ complexity and risks T1 absorbing the semantic signal, leaving T2
 with nothing to contribute.
 Revisit: If dev corpus is extended with purchase_intent examples
 and T1 learns feature 22, reintroduce score-band gate.
+
+## D011 — T0-derived features removed from T1; leakage confirmed
+Date: 2026-09-02
+Context: Audit revealed 7 of 22 T1 features were T0 rule outputs or direct
+inputs (t0_passed, t0_trigger_count, merchant_in_scope, category_in_scope,
+amount_over_cap, cart_hash_match, mandate_id_match). Because T0 catches every
+dev attack, t0_passed=0 was a near-perfect label proxy. t1_auc=1.0 was leakage.
+Choice: Remove all 7 features. Retrain. t1_auc drops to 0.6622.
+Post-ablation: T1 scores on family-13 sealed attacks (max=0.06) are lower than
+scores on hard negatives (max=0.13). T1 cannot separate semantic attacks from
+legitimate traffic. T0+T1 remains identical to T0 at tau*=1.0.
+Rejected: Keeping T1 with leaked features and reporting 1.0 as a valid result.
+Revisit: If T1 is rebuilt with semantic comparison features (intent-cart
+similarity, brand conflict, specificity scoring) rather than structural mandate
+features.
+
+## D012 — SHA256SUMS corrected for CRLF-era hash mismatch
+Date: 2026-09-02
+Context: Audit found data/dev/SHA256SUMS contained hashes computed from LF
+bytes, but attacks.jsonl and benign.jsonl were committed with CRLF bytes (Windows
+git.autocrlf artifact). The test_sha256_integrity_dev test was failing due to
+this pre-existing inconsistency, not a content change. hard_negatives.jsonl was
+unaffected (hashes matched).
+Choice: Recompute SHA256SUMS from actual on-disk bytes. Add .gitattributes to
+enforce LF on all corpus files going forward.
+Rejected: Restoring corpus files to a different byte state — record counts were
+verified identical (210 attacks, 800 benign), only line endings differed.
+Revisit: If .gitattributes enforcement is removed or bypassed on a new machine.
