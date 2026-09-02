@@ -78,6 +78,28 @@ It is then presented as an architecture decision, not a metrics win.
 This criterion was written before the result was known and is not revised after
 seeing it.
 
+**Honest assessment of the result:**
+
+The criterion as originally written is uninformative on the original corpus:
+T0 caught all dev attacks (families 1–7), leaving T0+T1 recall at 1.0 with
+no room for T2 to add lift. The criterion was only testable on family 13,
+which was added post-hoc after D008 T2 failure — a challenge set, not a
+pre-registered sealed set (RULES 19 violation, disclosed in D019).
+
+On the challenge set (family 13): T2 lifted recall from 0.8333 (T0+T1) to
+1.0 (+16.67pp), exceeding the ≥2pp threshold. This result is real but
+post-hoc. It demonstrates T2's value on semantic deviation, not a
+pre-registered validation.
+
+On the updated dev corpus with T0-passing semantic families 14/15 (A3):
+T1 separates these cleanly at tau*=1.0, making T2 unnecessary on current
+corpus. T2's role remains as documented: semantic verification on the
+subset where T1 is ambiguous, invoked via the purchase_intent gate.
+
+The correct framing: T2 is architecturally justified by the AP2 gap argument,
+not by this metric result. The metric result is supporting evidence, honestly
+bounded by the post-hoc nature of the challenge set.
+
 ## Metrics table columns
 
 `precision@prior` · `recall_seen` · `recall_unseen` · FP rate on Corpus B ·

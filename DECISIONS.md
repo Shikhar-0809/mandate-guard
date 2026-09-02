@@ -240,3 +240,15 @@ Rejected: Adding family 13 equivalents to dev. Family 13 is sealed-set
 territory; adding identical archetypes to dev would contaminate the evaluation.
 New families use distinct archetypes (brand substitution, scope creep).
 Revisit: When more semantic archetypes are needed for T1 training signal.
+
+## D020 — Reframe T2 kill criterion as post-hoc experiment (A4)
+Date: 2026-09-02
+Context: eval_t2_kill_criterion_met=true was reported as a pre-registered
+success. The criterion was pre-registered, but the only testable population
+(family 13) was added post-hoc after D008, violating RULES 19. The original
+dev corpus (families 1-7) had T0 recall=1.0, leaving no room for T2 lift.
+Choice: Reframe in EVAL.md. The +16.67pp lift on family 13 is real but
+post-hoc. T2 justification rests on the AP2 gap argument, not this metric.
+Rejected: Removing the kill criterion section. It shows honest pre-registration
+discipline even when the result is ambiguous — that is worth keeping.
+Revisit: When a genuinely pre-registered sealed set for semantic families exists.
