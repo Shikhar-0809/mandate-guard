@@ -39,6 +39,22 @@ INJECTION_PATTERNS: tuple[str, ...] = (
 
 AMOUNT_THRESHOLD_MINOR_UNITS: int = 10000  # ASSUMPTION — see baselines
 
+
+def _regex_baseline_text(record: dict[str, object]) -> str:
+    """Text fields a regex injection detector would scan at PSP inference time."""
+    parts = [
+        str(record.get("purchase_intent") or ""),
+        str(record.get("note") or ""),
+        str(record.get("merchant_id") or ""),
+        str(record.get("mcc") or ""),
+    ]
+    cart_items = record.get("cart_items") or []
+    for item in cart_items:
+        if isinstance(item, dict):
+            parts.append(str(item.get("name") or ""))
+    return " ".join(parts).lower()
+
+
 BaselineName = Literal[
     "allow_everything",
     "block_everything",
@@ -174,13 +190,7 @@ def score_baseline(name: BaselineName, record: dict[str, object]) -> float:
         amount = int(cast(int, record["transaction_amount_minor_units"]))
         return 1.0 if amount > AMOUNT_THRESHOLD_MINOR_UNITS else 0.0
     if name == "regex_injection_detector":
-        fields = [
-            str(record.get("note", "")),
-            str(record.get("family_note", "")),
-            str(record.get("merchant_id", "")),
-            str(record.get("mcc", "")),
-        ]
-        text = " ".join(fields).lower()
+        text = _regex_baseline_text(record)
         return 1.0 if any(pattern in text for pattern in INJECTION_PATTERNS) else 0.0
     args = _record_to_t0_args(record)
     result = t0_check(
