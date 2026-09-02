@@ -18,7 +18,7 @@ that sees the money move: the PSP.
 | Tier | Runs on | p99 | Cost/call |
 |------|---------|-----|-----------|
 | T0 deterministic mandate constraints | 100% | ~3 ms | ₹0 |
-| T1 calibrated GBM, 15 features | 100% | ~10 ms | ₹0 |
+| T1 calibrated GBM, 10 features | 100% | ~10 ms | ₹0 |
 | T2 LLM semantic verifier | ≤0.5% | 600–1500 ms | ₹0.4–2.0 |
 
 T0 checks: amount vs per-txn cap, cumulative vs period cap, beneficiary in
@@ -31,8 +31,8 @@ and structural delegation violations (scope expansion, mandate ID).
 Behavioral/semantic risk at the content level is T1/T2 territory.
 
 T1 runs on 100% deliberately — a censored score distribution blinds drift
-monitors. Post-ablation (D011): 15 features covering mandate structure and
-intent-cart lexical overlap. T0-derived features removed after audit confirmed
+monitors. Post-ablation (D011, D013): 10 semantic comparison features covering
+intent-cart similarity, brand detection, and structural amount ratio. T0-derived features removed after audit confirmed
 leakage (t1_auc was 1.0 due to t0_passed label proxy). Current t1_auc=0.6622;
 T1 contributes zero detection value at tau*=1.0 on the current corpus — the
 semantic attack family (13) requires T2, not structural ML.
