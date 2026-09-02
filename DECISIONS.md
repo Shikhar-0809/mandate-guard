@@ -263,3 +263,13 @@ Rejected: Synthesizing artificial injection-string records for slice (a).
 Our threat model is deviation at the PSP, not injection string detection.
 Adding injection strings would misrepresent the threat model.
 Revisit: If a real injection-string corpus becomes available for comparison.
+
+## D022 — Add TF-IDF cosine and logistic regression semantic baselines (B6)
+Date: 2026-09-02
+Context: B6 requires semantic baselines to show mandate-guard outperforms
+naive text-similarity approaches. sentence-transformers not installed
+(offline constraint). Two sklearn baselines added instead.
+Choice: TF-IDF cosine threshold (sim < 0.3 → BLOCK) and logistic regression
+on TF-IDF features trained on dev corpus.
+Rejected: Sentence-embedding cosine — not installable offline.
+Revisit: Add sentence-embedding baseline when online evaluation is possible.

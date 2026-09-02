@@ -15,7 +15,10 @@ from pathlib import Path
 from typing import Literal, TypedDict, cast
 
 import numpy as np
+from sklearn.linear_model import LogisticRegression  # type: ignore[import-untyped]
 from sklearn.metrics import average_precision_score  # type: ignore[import-untyped]
+from sklearn.metrics.pairwise import cosine_similarity  # type: ignore[import-untyped]
+from sklearn.feature_extraction.text import TfidfVectorizer  # type: ignore[import-untyped]
 
 from contracts import (
     CartItem,
@@ -39,6 +42,8 @@ INJECTION_PATTERNS: tuple[str, ...] = (
 
 AMOUNT_THRESHOLD_MINOR_UNITS: int = 10000  # ASSUMPTION — see baselines
 
+_SEMANTIC_BASELINES: dict[str, object] = {}
+
 
 def _regex_baseline_text(record: dict[str, object]) -> str:
     """Text fields a regex injection detector would scan at PSP inference time."""
@@ -60,6 +65,8 @@ BaselineName = Literal[
     "block_everything",
     "amount_threshold",
     "regex_injection_detector",
+    "tfidf_cosine_baseline",
+    "logreg_baseline",
     "t0_only",
 ]
 
@@ -181,6 +188,51 @@ def _delegation_token_from_record(
     )
 
 
+def _record_semantic_text(record: dict[str, object]) -> tuple[str, str]:
+    intent = str(record.get("purchase_intent") or "")
+    cart_items = record.get("cart_items") or []
+    cart_text = " ".join(
+        str(item.get("name") or "")
+        for item in cart_items
+        if isinstance(item, dict)
+    )
+    return intent, cart_text
+
+
+def _build_semantic_baselines() -> None:
+    dev_dir = Path(__file__).resolve().parents[2] / "data" / "dev"
+    records: list[dict[str, object]] = []
+    for filename in (
+        "attacks_with_intent.jsonl",
+        "benign_with_intent.jsonl",
+        "hard_negatives_with_intent.jsonl",
+    ):
+        for line in (dev_dir / filename).read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                records.append(json.loads(line))
+
+    texts: list[str] = []
+    labels: list[int] = []
+    for record in records:
+        intent, cart_text = _record_semantic_text(record)
+        texts.append(intent + " " + cart_text)
+        labels.append(1 if str(record["label"]) == "BLOCK" else 0)
+
+    vectorizer = TfidfVectorizer(
+        analyzer="word",
+        ngram_range=(1, 2),
+        min_df=2,
+        sublinear_tf=True,
+    )
+    features = vectorizer.fit_transform(texts)
+    classifier = LogisticRegression(max_iter=1000, random_state=42)
+    classifier.fit(features, labels)
+
+    _SEMANTIC_BASELINES["tfidf_vec"] = vectorizer
+    _SEMANTIC_BASELINES["tfidf_threshold"] = 0.3
+    _SEMANTIC_BASELINES["logreg"] = classifier
+
+
 def score_baseline(name: BaselineName, record: dict[str, object]) -> float:
     if name == "allow_everything":
         return 0.0
@@ -192,6 +244,33 @@ def score_baseline(name: BaselineName, record: dict[str, object]) -> float:
     if name == "regex_injection_detector":
         text = _regex_baseline_text(record)
         return 1.0 if any(pattern in text for pattern in INJECTION_PATTERNS) else 0.0
+    if name == "tfidf_cosine_baseline":
+        if not _SEMANTIC_BASELINES:
+            _build_semantic_baselines()
+        intent, cart_text = _record_semantic_text(record)
+        if not intent or not cart_text:
+            return 0.0
+        vectorizer = cast(TfidfVectorizer, _SEMANTIC_BASELINES["tfidf_vec"])
+        try:
+            vectors = vectorizer.transform([intent, cart_text])
+            similarity = float(cosine_similarity(vectors[0], vectors[1])[0][0])
+        except Exception:
+            return 0.0
+        threshold = float(cast(float, _SEMANTIC_BASELINES["tfidf_threshold"]))
+        return 1.0 if similarity < threshold else 0.0
+    if name == "logreg_baseline":
+        if not _SEMANTIC_BASELINES:
+            _build_semantic_baselines()
+        intent, cart_text = _record_semantic_text(record)
+        combined = intent + " " + cart_text
+        vectorizer = cast(TfidfVectorizer, _SEMANTIC_BASELINES["tfidf_vec"])
+        classifier = cast(LogisticRegression, _SEMANTIC_BASELINES["logreg"])
+        try:
+            features = vectorizer.transform([combined])
+            probability = float(classifier.predict_proba(features)[0][1])
+        except Exception:
+            return 0.0
+        return probability
     args = _record_to_t0_args(record)
     result = t0_check(
         args["intent"],

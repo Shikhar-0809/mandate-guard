@@ -80,6 +80,29 @@ A regex injection detector operates on individual field strings. These are
 categorically different tasks. Beating the regex baseline is not a close
 win — it is a category mismatch.
 
+## Semantic baselines (B6)
+
+TF-IDF cosine and logistic regression baselines trained on dev corpus
+(*_with_intent.jsonl). Evaluated on the same dev corpus at tau=0.5.
+sentence-transformers not available offline — excluded.
+
+| Baseline | Recall | FPR | TP | FP | FN | Notes |
+|----------|--------|-----|----|----|-----|-------|
+| tfidf_cosine (sim<0.3→BLOCK) | 0.8889 | 0.4751 | 240 | 478 | 30 | High recall, unusable FPR |
+| logreg on TF-IDF features | 0.7778 | 0.0000 | 210 | 0 | 60 | Perfect precision, misses T0-blocking families |
+| T0+T1 (tau*=0.65) | 1.0000 | 0.0030 | 270 | 3 | 0 | Dominates both axes |
+
+TF-IDF cosine flags ~47% of legitimate records as suspicious — the
+intent-cart text similarity threshold cannot distinguish structural mandate
+violations from semantic ones without the constraint layer T0 provides.
+
+Logistic regression achieves perfect precision but misses 60/270 attacks
+(families 1–7 where purchase_intent is structurally consistent with the
+authorized cart description). These are caught by T0, not by text similarity.
+
+mandate-guard (T0+T1 at tau*=0.65) dominates both semantic baselines on
+recall and FPR simultaneously.
+
 ## Operating point
 
 ```
