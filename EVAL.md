@@ -58,6 +58,28 @@ detector** · T0 rules only
 Beating the regex detector is the empirical justification for the entire
 mandate-deviation framing.
 
+### Three-way injection experiment (A5)
+
+The regex detector scans PSP-visible fields for injection-pattern strings.
+Mandate deviation has three structural cases:
+
+| Slice | Description | Regex recall | mandate-guard |
+|-------|-------------|-------------|---------------|
+| (a) Injection in PSP record | Attack string appears in note/cart/intent field | Would fire | Not in corpus — PSP-visible injection is detectable but not the threat model |
+| (b) Upstream injection only | Deviant cart reaches PSP; no injection string present | 0/270 (0.0%) | T0 catches structural violations (families 1–7) |
+| (c) Semantic deviation | Intent-cart mismatch; no injection anywhere | 0/150 (0.0%) | T1/T2 catch semantic mismatch (families 13–15) |
+
+**Result:** regex recall = 0.0000 on all 270 dev attacks and 150 sealed attacks.
+The regex detector cannot detect mandate deviation because mandate deviation
+is a semantic property of the relationship between intent and cart, not a
+syntactic property of any single field.
+
+This is the causal proof that injection detection is the wrong framing.
+A mandate-deviation detector operates on (intent, cart, payment) triples.
+A regex injection detector operates on individual field strings. These are
+categorically different tasks. Beating the regex baseline is not a close
+win — it is a category mismatch.
+
 ## Operating point
 
 ```

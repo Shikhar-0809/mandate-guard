@@ -252,3 +252,14 @@ post-hoc. T2 justification rests on the AP2 gap argument, not this metric.
 Rejected: Removing the kill criterion section. It shows honest pre-registration
 discipline even when the result is ambiguous — that is worth keeping.
 Revisit: When a genuinely pre-registered sealed set for semantic families exists.
+
+## D021 — Document three-way injection experiment (A5)
+Date: 2026-09-02
+Context: A5 required running regex + mandate-guard on three corpus slices to
+prove injection detection is categorically wrong as a defense framing.
+Choice: Document in EVAL.md as a table. No new code needed — the corpus
+already covers all three slices. Regex fires 0/270 dev and 0/150 sealed.
+Rejected: Synthesizing artificial injection-string records for slice (a).
+Our threat model is deviation at the PSP, not injection string detection.
+Adding injection strings would misrepresent the threat model.
+Revisit: If a real injection-string corpus becomes available for comparison.
