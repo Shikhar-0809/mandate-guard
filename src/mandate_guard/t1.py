@@ -240,7 +240,10 @@ def train(
     )
 
     baselines_path = Path(__file__).resolve().parents[2] / "baselines.json"
-    baselines = {
+    existing: dict[str, object] = {}
+    if baselines_path.exists():
+        existing = json.loads(baselines_path.read_text(encoding="utf-8"))
+    existing.update({
         "t1_auc": auc,
         "t1_precision": precision,
         "t1_recall": recall,
@@ -248,8 +251,10 @@ def train(
         "trained_on_n": len(records),
         "holdout_n": len(y_test),
         "feature_count": len(FEATURE_NAMES),
-    }
-    baselines_path.write_text(json.dumps(baselines, indent=2), encoding="utf-8")
+    })
+    baselines_path.write_text(
+        json.dumps(existing, indent=2) + "\n", encoding="utf-8"
+    )
 
     return {
         "auc": auc,
