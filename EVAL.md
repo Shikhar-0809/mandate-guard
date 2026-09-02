@@ -165,6 +165,22 @@ T0 rule hit counts across all attack records:
 - CART_HASH_MISMATCH: 30
 - MANDATE_ID_MISMATCH: 30
 
+## Confidence intervals (Wilson, 95%)
+
+Point estimates without intervals are untrustworthy at small n.
+All intervals use the Wilson score method (z=1.96).
+
+| Metric | k | n | Point | 95% CI |
+|--------|---|---|-------|--------|
+| T2 recall, family-13 | 25 | 25 | 1.000 | [0.8668, 1.0000] |
+| T2 FPR on HN (BLOCK) | 1 | 206 | 0.005 | [0.0009, 0.0270] |
+| T2 FPR on HN (HOLD) | 21 | 206 | 0.102 | [0.0676, 0.1508] |
+| Regex recall, dev attacks | 0 | 270 | 0.000 | [0.0000, 0.0140] |
+| Regex recall, sealed attacks | 0 | 150 | 0.000 | [0.0000, 0.0250] |
+| T1 recall, families 14-15 | 60 | 60 | 1.000 | [0.9398, 1.0000] |
+| T0+T1 recall, families 8-12 | 100 | 100 | 1.000 | [0.9630, 1.0000] |
+| T0+T1 recall, family-13 | 6 | 25 | 0.240 | [0.1150, 0.4343] |
+
 ## Honest limitations → `docs/LIMITATIONS.md`
 
 Synthetic data. Prior-dependent precision. Consent-time compromise out of scope.
