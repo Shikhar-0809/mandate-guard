@@ -181,6 +181,48 @@ All intervals use the Wilson score method (z=1.96).
 | T0+T1 recall, families 8-12 | 100 | 100 | 1.000 | [0.9630, 1.0000] |
 | T0+T1 recall, family-13 | 6 | 25 | 0.240 | [0.1150, 0.4343] |
 
+## T1 score distributions by family
+
+T1 scores on attack records (dev + sealed) and hard negatives (dev).
+`Flagged (>=0.5)` counts records that would trigger at tau=0.5.
+
+| Family | N | Min | Mean | Max | Flagged (>=0.5) |
+|--------|---|-----|------|-----|-----------------|
+| attack_family_1 | 30 | 1.000 | 1.000 | 1.000 | 30 |
+| attack_family_2 | 30 | 1.000 | 1.000 | 1.000 | 30 |
+| attack_family_3 | 30 | 0.788 | 0.788 | 0.788 | 30 |
+| attack_family_4 | 30 | 0.802 | 0.993 | 1.000 | 30 |
+| attack_family_5 | 30 | 1.000 | 1.000 | 1.000 | 30 |
+| attack_family_6 | 30 | 1.000 | 1.000 | 1.000 | 30 |
+| attack_family_7 | 30 | 1.000 | 1.000 | 1.000 | 30 |
+| attack_family_8 | 25 | 0.603 | 0.603 | 0.603 | 25 |
+| attack_family_9 | 25 | 0.603 | 0.603 | 0.603 | 25 |
+| attack_family_10 | 25 | 0.603 | 0.603 | 0.603 | 25 |
+| attack_family_11 | 25 | 0.603 | 0.603 | 0.603 | 25 |
+| attack_family_12 | 25 | 0.603 | 0.603 | 0.603 | 25 |
+| attack_family_13 | 25 | 0.788 | 0.887 | 1.000 | 25 |
+| attack_family_14 | 30 | 1.000 | 1.000 | 1.000 | 30 |
+| attack_family_15 | 30 | 1.000 | 1.000 | 1.000 | 30 |
+| hn_basket_split | 20 | 0.000 | 0.001 | 0.002 | 0 |
+| hn_currency_rounding | 20 | 0.000 | 0.001 | 0.002 | 0 |
+| hn_narrowed_delegation | 20 | 0.000 | 0.001 | 0.002 | 0 |
+| hn_partial_capture | 20 | 0.000 | 0.001 | 0.002 | 0 |
+| hn_post_snapshot_delivery | 20 | 0.002 | 0.003 | 0.006 | 0 |
+| hn_price_drift | 20 | 0.000 | 0.001 | 0.002 | 0 |
+| hn_retry_fresh_idempotency | 20 | 0.000 | 0.001 | 0.002 | 0 |
+| hn_semantic_ambiguous | 6 | 0.529 | 0.694 | 0.929 | 6 |
+| hn_stockout_substitution | 20 | 0.000 | 0.000 | 0.000 | 0 |
+| hn_subscription_stepup | 20 | 0.000 | 0.001 | 0.002 | 0 |
+| hn_subsidiary_confusability | 20 | 0.002 | 0.002 | 0.002 | 0 |
+
+†hn_semantic_ambiguous scores 0.529–0.929: all 6 flagged at tau=0.5. These
+are ALLOW records — FPs at any threshold below 0.929. At tau*=1.0 they pass
+through correctly, but this is the population T2 is designed to arbitrate.
+
+‡Families 8–12 score uniformly at 0.603 — the model prior when semantic
+features are near-zero (no purchase_intent populated in base corpus records).
+T0 catches these; T1 score is informational only.
+
 ## Honest limitations → `docs/LIMITATIONS.md`
 
 Synthetic data. Prior-dependent precision. Consent-time compromise out of scope.
