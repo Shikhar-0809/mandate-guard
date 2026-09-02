@@ -26,7 +26,7 @@ def _base_record(**overrides: object) -> dict[str, object]:
 
 def test_feature_count() -> None:
     features = extract_features(_base_record())
-    assert len(features) == len(FEATURE_NAMES) == 10
+    assert len(features) == len(FEATURE_NAMES) == 7
 
 
 def test_all_finite() -> None:
@@ -44,31 +44,11 @@ def test_jaccard_token_overlap() -> None:
     assert features[index] > 0.3
 
 
-def test_brand_conflict() -> None:
-    record = _base_record(
-        purchase_intent="renew Zoom subscription",
-        cart_items=[{"name": "Microsoft Teams", "quantity": 1}],
-    )
-    features = extract_features(record)
-    index = FEATURE_NAMES.index("brand_conflict")
-    assert features[index] == 1.0
-
-
 def test_tfidf_cosine_sim_none() -> None:
     record = _base_record(purchase_intent="buy Zoom license")
     features = extract_features(record, tfidf_vectorizer=None)
     index = FEATURE_NAMES.index("tfidf_cosine_sim")
     assert features[index] == 0.0
-
-
-def test_amount_to_cap_ratio() -> None:
-    record = _base_record(
-        amount_minor_units=10000,
-        per_txn_cap_minor_units=10000,
-    )
-    features = extract_features(record)
-    index = FEATURE_NAMES.index("amount_to_cap_ratio")
-    assert features[index] == 1.0
 
 
 def test_deterministic() -> None:

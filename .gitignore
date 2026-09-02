@@ -10,3 +10,4 @@ captures/
 models/*.joblib
 models/*.json
 eval_outputs/*.json
+feature_importances.json

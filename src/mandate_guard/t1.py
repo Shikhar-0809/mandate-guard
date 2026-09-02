@@ -256,6 +256,23 @@ def train(
         json.dumps(existing, indent=2) + "\n", encoding="utf-8"
     )
 
+    # A2: feature importance audit
+    import json as _json, pathlib as _pathlib
+    _fold_imps: list[np.ndarray] = []
+    for _cc in clf.calibrated_classifiers_:
+        _fold_imps.append(
+            _cc.estimator.booster_.feature_importance(importance_type="gain")
+        )
+    _avg_imp = np.mean(np.stack(_fold_imps, axis=0), axis=0)
+    _imp = dict(zip(list(FEATURE_NAMES), (float(x) for x in _avg_imp)))
+    _ranked = sorted(_imp.items(), key=lambda x: -x[1])
+    _pathlib.Path("feature_importances.json").write_text(
+        _json.dumps(_ranked, indent=2)
+    )
+    print("FEATURE IMPORTANCES:")
+    for _name, _score in _ranked:
+        print(f"  {_score:.4f}  {_name}")
+
     return {
         "auc": auc,
         "precision": precision,

@@ -37,10 +37,7 @@ leakage (t1_auc was 1.0 due to t0_passed label proxy). Current t1_auc=0.6622;
 T1 contributes zero detection value at tau*=1.0 on the current corpus — the
 semantic attack family (13) requires T2, not structural ML.
 
-T2 gate: T0 passed AND `purchase_intent` non-empty (D010). Numeric deviation
-never reaches T2; arithmetic does not need a language model. Semantic deviation
-requires T2; structural ML (T1) cannot separate semantic attacks from hard
-negatives at the current feature set.
+T2 gate: `purchase_intent` populated AND (`amount ≥ X` OR `deviation_type ∈ {SKU_SEMANTIC, BENEFICIARY_IDENTITY}`). Numeric deviation never reaches T2; arithmetic does not need a language model.
 
 ## Invariants
 
@@ -67,7 +64,6 @@ negatives at the current feature set.
 `ALLOW` / `HOLD` / `BLOCK`. Three-way rather than binary because
 HOLD costs ~₹45 against BLOCK at ~₹320 — the deferral window is a property of
 the rail, so exploit it.
-CHALLENGE was removed (D007): no step-up authentication flow exists.
 
 ## Cost matrix
 All inputs are ASSUMPTIONS until cited in `config/cost_model.yaml`.

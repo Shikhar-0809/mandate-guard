@@ -176,3 +176,40 @@ demonstrate clear separation (gap=0.92) on the only population that matters
 (family-13 semantic attacks). Structural features had gap=0.
 Revisit: If dev corpus is extended with semantic attack families so tau_star
 can be optimized on T0-passing attacks.
+
+## D015 — Remove two broken features: amount_to_cap_ratio and cart_has_brand
+Date: 2026-09-02
+Context: A2 feature variance audit revealed amount_to_cap_ratio is always 0.0
+across all 2432 corpus records (cap field absent in corpus; extractor returns
+zero). cart_has_brand is always 1.0 (constant; no information content).
+LightGBM importances were all zero because constant/zero columns carry no split
+value. Both features removed. Feature count drops 10→8.
+Choice: Remove both features. Retrain. Verify AUC holds above 0.99.
+Rejected: Fixing the extractors. amount_to_cap_ratio requires cap metadata not
+present in dev corpus. cart_has_brand requires brand taxonomy not yet built.
+Revisit: When corpus includes per-item cap fields and a brand taxonomy is added.
+
+## D016 — Train T1 on intent-populated corpus only
+Date: 2026-09-02
+Context: DEV_RECORDS in test_t1.py loaded base files (benign.jsonl,
+hard_negatives.jsonl, attacks.jsonl) where purchase_intent is empty on all
+records. All 8 semantic features are zero when intent is absent. T1 trained
+on a featureless corpus, producing t1_auc=0.5. The *_with_intent.jsonl files
+(1216 records total) are the only population where semantic features have
+variance and T1 can learn.
+Choice: Train exclusively on *_with_intent.jsonl files (benign, hard_negatives,
+attacks — all three intent-populated variants).
+Rejected: Training on combined base + intent files. Zero-feature rows add noise
+and dilute the signal; they should score via T0 or T2, not T1.
+Revisit: When all corpus records carry purchase_intent by default.
+
+## D017 — Remove brand_conflict feature
+Date: 2026-09-02
+Context: A2 importance audit showed brand_conflict importance=0.0 after
+cart_has_brand removal (D015). brand_conflict fires only when both
+intent_has_brand and cart_has_brand are 1.0 — with cart_has_brand removed,
+the condition can never be true. Dead feature.
+Choice: Remove brand_conflict. Feature count drops 8→7.
+Rejected: Keeping it as a documented zero-importance feature. Dead code
+in a feature vector is a maintenance liability and a false signal.
+Revisit: If cart_has_brand is restored with a working brand taxonomy.

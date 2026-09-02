@@ -20,21 +20,24 @@ _DATA_DEV = Path(__file__).resolve().parents[2] / "data" / "dev"
 DEV_RECORDS = (
     [
         json.loads(line)
-        for line in (_DATA_DEV / "benign.jsonl")
+        for line in (_DATA_DEV / "benign_with_intent.jsonl")
         .read_text(encoding="utf-8")
         .splitlines()
+        if line.strip()
     ]
     + [
         json.loads(line)
-        for line in (_DATA_DEV / "hard_negatives.jsonl")
+        for line in (_DATA_DEV / "hard_negatives_with_intent.jsonl")
         .read_text(encoding="utf-8")
         .splitlines()
+        if line.strip()
     ]
     + [
         json.loads(line)
-        for line in (_DATA_DEV / "attacks.jsonl")
+        for line in (_DATA_DEV / "attacks_with_intent.jsonl")
         .read_text(encoding="utf-8")
         .splitlines()
+        if line.strip()
     ]
 )
 

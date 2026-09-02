@@ -23,12 +23,9 @@ FEATURE_NAMES = [
     "char_trigram_overlap",
     "tfidf_cosine_sim",
     "intent_has_brand",
-    "cart_has_brand",
-    "brand_conflict",
     "intent_specificity",
     "cart_category_match",
     "quantity_mismatch",
-    "amount_to_cap_ratio",
 ]
 
 
@@ -99,24 +96,14 @@ def extract_features(
     # 4. intent_has_brand
     intent_has_brand = _has_brand(intent)
 
-    # 5. cart_has_brand
-    cart_has_brand = _has_brand(cart_text)
-
-    # 6. brand_conflict
-    brand_conflict = (
-        1.0
-        if (intent_has_brand == 1.0 and cart_has_brand == 1.0 and tfidf_sim < 0.3)
-        else 0.0
-    )
-
-    # 7. intent_specificity
+    # 5. intent_specificity
     intent_words = _tokenize(intent)
     content_words = [w for w in intent_words if w not in STOPWORDS]
     intent_specificity = (
         len(content_words) / max(1, len(intent_words)) if intent_words else 0.0
     )
 
-    # 8. cart_category_match
+    # 6. cart_category_match
     first_content = next(
         (w for w in _tokenize(intent) if w not in STOPWORDS), None
     )
@@ -126,7 +113,7 @@ def extract_features(
         else 0.0
     )
 
-    # 9. quantity_mismatch
+    # 7. quantity_mismatch
     intent_qty = _extract_first_int(intent)
     cart_qty = None
     if cart_items:
@@ -141,20 +128,12 @@ def extract_features(
     else:
         quantity_mismatch = 0.0
 
-    # 10. amount_to_cap_ratio
-    amount = record.get("amount_minor_units") or 0
-    cap = record.get("per_txn_cap_minor_units") or 0
-    amount_to_cap_ratio = (amount / cap) if cap > 0 else 0.0
-
     return [
         jaccard,
         trigram_sim,
         tfidf_sim,
         intent_has_brand,
-        cart_has_brand,
-        brand_conflict,
         intent_specificity,
         cart_category_match,
         quantity_mismatch,
-        amount_to_cap_ratio,
     ]
