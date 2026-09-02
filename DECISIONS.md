@@ -225,3 +225,18 @@ Rejected: Removing family 13 from reporting. Post-hoc results are still useful
 when disclosed honestly as exploratory, not pre-registered.
 Revisit: When a genuinely pre-registered sealed set for family 13 equivalents
 exists.
+
+## D018 — Add T0-passing semantic attack families 14 and 15 to dev corpus (A3)
+Date: 2026-09-02
+Context: All dev attack families (1-7) fail T0 — amount over cap, wrong
+merchant, wrong MCC, hash mismatch, scope expansion. T1 never saw a genuine
+positive on T0-passing records. tau_star=1.0 was an artifact: T0 solved the
+dev corpus entirely, leaving T1 nothing to learn from on the attack side.
+Choice: Add families 14 (brand substitution) and 15 (scope creep) — T0-passing
+semantic attacks with purchase_intent populated, amounts under cap, merchants
+in allowlist, no cart hash pin. Fails only on semantic mismatch detectable by
+T1/T2. Fit tau_star on this updated dev corpus.
+Rejected: Adding family 13 equivalents to dev. Family 13 is sealed-set
+territory; adding identical archetypes to dev would contaminate the evaluation.
+New families use distinct archetypes (brand substitution, scope creep).
+Revisit: When more semantic archetypes are needed for T1 training signal.

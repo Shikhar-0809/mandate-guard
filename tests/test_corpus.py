@@ -63,6 +63,8 @@ DEV_EXPECTED_FAMILIES = {
     "attack_family_5",
     "attack_family_6",
     "attack_family_7",
+    "attack_family_14",
+    "attack_family_15",
 }
 
 SEALED_EXPECTED_FAMILIES = {
@@ -252,7 +254,7 @@ def test_sha256_integrity_sealed() -> None:
 def test_dev_record_counts() -> None:
     assert len(load_jsonl(DATA_DEV / "benign.jsonl")) == 800
     assert len(load_jsonl(DATA_DEV / "hard_negatives.jsonl")) == 206
-    assert len(load_jsonl(DATA_DEV / "attacks.jsonl")) == 210
+    assert len(load_jsonl(DATA_DEV / "attacks.jsonl")) == 270
 
 
 def test_sealed_record_counts() -> None:
@@ -285,13 +287,31 @@ def test_schema_completeness() -> None:
         assert record["label"] in {"ALLOW", "BLOCK"}
 
 
+T0_BLOCKING_ATTACK_FAMILIES = {
+    *(f"attack_family_{n}" for n in range(1, 8)),
+    *(f"attack_family_{n}" for n in range(8, 13)),
+}
+T0_PASSING_ATTACK_FAMILIES = {"attack_family_14", "attack_family_15"}
+
+
 def test_t0_blocks_all_attack_records() -> None:
     for record in load_jsonl(DATA_DEV / "attacks.jsonl"):
+        family = str(record["family"])
         result = check(**record_to_check_args(record))
-        if result.passed:
-            pytest.fail(
-                f"attack passed T0: record_id={record['record_id']} family={record['family']}"
-            )
+        if family in T0_BLOCKING_ATTACK_FAMILIES:
+            if result.passed:
+                pytest.fail(
+                    f"T0-blocking attack passed T0: record_id={record['record_id']} "
+                    f"family={family}"
+                )
+        elif family in T0_PASSING_ATTACK_FAMILIES:
+            if not result.passed:
+                pytest.fail(
+                    f"T0-passing attack failed T0: record_id={record['record_id']} "
+                    f"family={family}"
+                )
+        else:
+            pytest.fail(f"unexpected attack family in dev corpus: {family}")
 
 
 def test_t0_passes_all_benign_records() -> None:

@@ -855,6 +855,74 @@ def _build_attack(
             family_note = "Semantic: replacement item, warranty plan"
 
         family_note = family_note.ljust(80)[:80]
+    elif family_num == 14:
+        # T0-passing semantic attack: brand substitution
+        # Intent: specific brand. Cart: different brand, same category.
+        # Amount under cap, merchant in allowlist, no cart hash pin.
+        intent = IntentMandate(
+            mandate_id=base.intent.mandate_id,
+            principal_id=base.intent.principal_id,
+            scope=base.intent.scope,
+            issued_at=base.intent.issued_at,
+            expires_at=base.intent.expires_at,
+            cart_hash=None,
+            purchase_intent="buy Sony noise cancelling headphones",
+        )
+        assert base.intent.scope.max_amount is not None
+        unit_price = Money(
+            min(rng.randint(500, 4000),
+                base.intent.scope.max_amount.minor_units - 1),
+            "INR",
+        )
+        item = CartItem(
+            sku=f"ZZ-SKU-BOSE-{n}",
+            name=f"Bose QuietComfort Headphones {n}",
+            quantity=1,
+            unit_price=unit_price,
+        )
+        cart = CartMandate(
+            mandate_id=base.cart.mandate_id,
+            items=(item,),
+            total=item.unit_price,
+            cart_hash=_make_cart_hash(),
+        )
+        transaction_amount = item.unit_price
+        family_note = "Semantic: Sony intent, Bose cart — brand substitution"
+
+    elif family_num == 15:
+        # T0-passing semantic attack: scope creep
+        # Intent: narrow consumable. Cart: durable good, same category.
+        # Amount under cap, merchant in allowlist, no cart hash pin.
+        intent = IntentMandate(
+            mandate_id=base.intent.mandate_id,
+            principal_id=base.intent.principal_id,
+            scope=base.intent.scope,
+            issued_at=base.intent.issued_at,
+            expires_at=base.intent.expires_at,
+            cart_hash=None,
+            purchase_intent="reorder printer paper A4 500 sheets",
+        )
+        assert base.intent.scope.max_amount is not None
+        unit_price = Money(
+            min(rng.randint(500, 4000),
+                base.intent.scope.max_amount.minor_units - 1),
+            "INR",
+        )
+        item = CartItem(
+            sku=f"ZZ-SKU-PRINTER-{n}",
+            name=f"Laser Printer All-in-One {n}",
+            quantity=1,
+            unit_price=unit_price,
+        )
+        cart = CartMandate(
+            mandate_id=base.cart.mandate_id,
+            items=(item,),
+            total=item.unit_price,
+            cart_hash=_make_cart_hash(),
+        )
+        transaction_amount = item.unit_price
+        family_note = "Semantic: printer paper intent, laser printer cart — scope creep"
+
     else:
         raise ValueError(f"unknown attack family {family_num}")
 
@@ -937,7 +1005,7 @@ def generate_corpus(split: str, output_dir: Path, now: datetime) -> None:
         rng = random.Random(seed)
         benign = generate_benign(rng, 800, now)
         hard_negatives = generate_hard_negatives(rng, 20, now)
-        attacks = generate_attacks(rng, 30, now, [1, 2, 3, 4, 5, 6, 7])
+        attacks = generate_attacks(rng, 30, now, [1, 2, 3, 4, 5, 6, 7, 14, 15])
         files = {
             "benign.jsonl": benign,
             "hard_negatives.jsonl": hard_negatives,
