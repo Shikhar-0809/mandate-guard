@@ -223,6 +223,45 @@ through correctly, but this is the population T2 is designed to arbitrate.
 features are near-zero (no purchase_intent populated in base corpus records).
 T0 catches these; T1 score is informational only.
 
+## Threshold stability (B11)
+
+Sweep tau from 0.50 to 1.00 on dev corpus (T0-passing semantic families only
+carry signal; T0-blocking families score >=0.6 regardless).
+
+| tau | recall | fpr_all | fpr_hn | fp | fn | cost (₹) |
+|-----|--------|---------|--------|----|----|----------|
+| 0.50 | 1.0000 | 0.0060 | 0.0291 | 6 | 0 | 1920 |
+| 0.55 | 1.0000 | 0.0040 | 0.0194 | 4 | 0 | 1280 |
+| 0.60 | 1.0000 | 0.0040 | 0.0194 | 4 | 0 | 1280 |
+| 0.65 | 1.0000 | 0.0030 | 0.0146 | 3 | 0 | 960 |
+| 0.70 | 1.0000 | 0.0030 | 0.0146 | 3 | 0 | 960 |
+| 0.75 | 1.0000 | 0.0030 | 0.0146 | 3 | 0 | 960 |
+| 0.80 | 0.8889 | 0.0010 | 0.0049 | 1 | 30 | 44420 |
+| 0.85 | 0.8852 | 0.0010 | 0.0049 | 1 | 31 | 45890 |
+| 0.90 | 0.8852 | 0.0010 | 0.0049 | 1 | 31 | 45890 |
+| 0.95 | 0.8852 | 0.0000 | 0.0000 | 0 | 31 | 45570 |
+| 1.00 | 0.8852 | 0.0000 | 0.0000 | 0 | 31 | 45570 |
+
+Cost uses C_fp=₹320, C_fn=₹1470 (4.6:1 base case).
+
+## Cost ratio sensitivity (B12)
+
+tau* under four FN:FP cost assumptions. Base case is 4.6:1 (assumed matrix).
+
+| FN:FP | C_fn (₹) | C_fp (₹) | tau* | recall | fp | fn | cost (₹) |
+|-------|----------|----------|------|--------|----|----|----------|
+| 1.0:1 | 320 | 320 | 0.65 | 1.0000 | 3 | 0 | 960 |
+| 3.0:1 | 960 | 320 | 0.65 | 1.0000 | 3 | 0 | 960 |
+| 5.0:1 | 1600 | 320 | 0.65 | 1.0000 | 3 | 0 | 960 |
+| 10.0:1 | 3200 | 320 | 0.65 | 1.0000 | 3 | 0 | 960 |
+| 4.6:1 | 1472 | 320 | 0.65 | 1.0000 | 3 | 0 | 960 |
+
+Note: at all ratios tested, tau*=0.65 on this corpus (recall=1.0000, fp=3,
+fn=0). tau*=1.0 would leave 31 FNs (recall=0.8852) because T0-blocking dev
+families score below 1.0 on T1 but are caught by T0 in production. Threshold
+stability holds across cost ratios; the optimum is not sensitive to FN:FP
+within the range tested.
+
 ## Honest limitations → `docs/LIMITATIONS.md`
 
 Synthetic data. Prior-dependent precision. Consent-time compromise out of scope.
