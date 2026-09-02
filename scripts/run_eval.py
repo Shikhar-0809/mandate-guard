@@ -128,7 +128,7 @@ def main() -> None:
     )
     print(f"Sealed corpus: {n_sealed} attacks")
     print(
-        "Cost model: FP=₹320 FN=₹1470 HOLD=₹45 (HOLD not yet in eval)"
+        "Cost model: FP=₹320 FN=₹1470 HOLD=₹45 (three-term objective: fp*320 + fn*1470 + hold*45)"
         "              [ASSUMPTION — see config/cost_model.yaml when built]"
     )
     print()

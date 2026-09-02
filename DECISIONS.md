@@ -159,3 +159,20 @@ enforce LF on all corpus files going forward.
 Rejected: Restoring corpus files to a different byte state — record counts were
 verified identical (210 attacks, 800 benign), only line endings differed.
 Revisit: If .gitattributes enforcement is removed or bypassed on a new machine.
+
+## D013 — Semantic T1 with intent-populated corpus; tau_star remains 1.0
+Date: 2026-09-02
+Context: Semantic T1 (10 features: jaccard, trigram, tfidf-cosine, brand
+detection, brand-conflict, specificity, category-match, quantity-mismatch,
+amount-to-cap-ratio) trained on intent-populated corpus achieves auc=0.9988.
+Family-13 sealed attack scores: mean=0.9405 (min=0.8867). HN scores: mean=0.0199
+(max=0.9622, 4 FP at any tau>0). tau_star=1.0 because all dev attacks are caught
+by T0 -- no T0-passing attacks exist in the dev corpus for the optimizer to learn
+from. T1 contributes on family-13 (sealed) only. HOLD term added to cost function
+(hold_cost=45.0 parameter in find_cost_optimal_threshold). HOLD banner removed
+from eval output.
+Rejected: Reverting to structural features (Option B) -- semantic features
+demonstrate clear separation (gap=0.92) on the only population that matters
+(family-13 semantic attacks). Structural features had gap=0.
+Revisit: If dev corpus is extended with semantic attack families so tau_star
+can be optimized on T0-passing attacks.

@@ -285,6 +285,7 @@ def find_cost_optimal_threshold(
     scores: list[float],
     fp_cost: float = 320.0,
     fn_cost: float = 1470.0,
+    hold_cost: float = 45.0,
 ) -> tuple[float, float]:
     y_true = [1 if str(record["label"]) == "BLOCK" else 0 for record in records]
     best_tau = 0.0
@@ -298,7 +299,8 @@ def find_cost_optimal_threshold(
         fn = sum(
             prediction == 0 and label == 1 for prediction, label in zip(preds, y_true)
         )
-        cost = fp * fp_cost + fn * fn_cost
+        hold = sum(1 for s in scores if 0.0 < s < tau)
+        cost = fp * fp_cost + fn * fn_cost + hold * hold_cost
         if cost < best_cost or (cost == best_cost and tau > best_tau):
             best_tau = tau
             best_cost = cost
