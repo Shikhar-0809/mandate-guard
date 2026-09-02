@@ -129,6 +129,42 @@ PR-AUC · ECE · p99 added ms · ₹/1k decisions · net ₹/10k txns
 
 Drop F1, and say why when dropping it.
 
+## Per-family recall by tier
+
+T2 column for family 13 sourced from baselines.json (eval_t2_blocked=25/25).
+Families 14–15 are dev-only (post-A3); family 13 is sealed challenge set
+(post-hoc, RULES 19 violation disclosed). Families 8–12 are pre-registered
+sealed set.
+
+| Family | N | Tier | T0 | T0+T1 | T0+T1+T2 | Notes |
+|--------|---|------|----|-------|----------|-------|
+| attack_family_1 | 30 | dev | 1.000 | 1.000 | 1.000 | Amount over cap |
+| attack_family_2 | 30 | dev | 1.000 | 1.000 | 1.000 | Merchant not in allowlist |
+| attack_family_3 | 30 | dev | 1.000 | 1.000 | 1.000 | Category not in allowlist |
+| attack_family_4 | 30 | dev | 1.000 | 1.000 | 1.000 | Cart hash tampered |
+| attack_family_5 | 30 | dev | 1.000 | 1.000 | 1.000 | Scope expansion via delegation |
+| attack_family_6 | 30 | dev | 1.000 | 1.000 | 1.000 | Mandate ID mismatch |
+| attack_family_7 | 30 | dev | 1.000 | 1.000 | 1.000 | Compound: amount + merchant |
+| attack_family_8 | 25 | sealed | 1.000 | 1.000 | 1.000 | Boundary amount + unauth merchant |
+| attack_family_9 | 25 | sealed | 1.000 | 1.000 | 1.000 | Subsidiary name confusion |
+| attack_family_10 | 25 | sealed | 1.000 | 1.000 | 1.000 | Delivery fee pushes over cap |
+| attack_family_11 | 25 | sealed | 1.000 | 1.000 | 1.000 | Cumulative drift crosses cap |
+| attack_family_12 | 25 | sealed | 1.000 | 1.000 | 1.000 | Multi-hop scope expansion |
+| attack_family_13 | 25 | challenge† | 0.000 | 0.240 | 1.000 | Semantic deviation (T2 required) |
+| attack_family_14 | 30 | dev | 0.000 | 1.000 | 1.000 | Brand substitution (T1 catches) |
+| attack_family_15 | 30 | dev | 0.000 | 1.000 | 1.000 | Scope creep (T1 catches) |
+
+†Family 13: post-hoc challenge set, not pre-registered sealed. RULES 19 violation disclosed.
+
+T0 rule hit counts across all attack records:
+
+- AMOUNT_EXCEEDS_CAP: 110
+- BENEFICIARY_NOT_ALLOWED: 110
+- SCOPE_EXPANSION: 55
+- CATEGORY_NOT_ALLOWED: 30
+- CART_HASH_MISMATCH: 30
+- MANDATE_ID_MISMATCH: 30
+
 ## Honest limitations → `docs/LIMITATIONS.md`
 
 Synthetic data. Prior-dependent precision. Consent-time compromise out of scope.
