@@ -1,106 +1,160 @@
-"""T1 feature extraction from PSP-observable transaction inputs.
+"""Semantic feature extraction for T1.
 
-All features must be observable at PSP inference time from the transaction
-inputs alone. No generation metadata (family, note, family_note) is used.
+Features operate in the intent-cart comparison space only.
+Structural mandate features (amount caps, merchant scope, etc.) are T0's domain.
+T0-derived features are excluded — see D011.
 """
 
 from __future__ import annotations
 
 import math
-from datetime import datetime
+import re
+from typing import Any
 
-from contracts import CartMandate, DelegationToken, IntentMandate, Money
+STOPWORDS = {
+    "buy", "get", "order", "please", "the", "our", "team", "a", "an",
+    "for", "to", "of", "and", "or", "in", "on", "with", "some", "new",
+    "same", "last", "next", "this", "that", "from", "just", "need",
+    "want", "renew", "renewal", "subscription", "upgrade", "purchase",
+}
 
-FEATURE_NAMES: tuple[str, ...] = (
+FEATURE_NAMES = [
+    "jaccard_token_overlap",
+    "char_trigram_overlap",
+    "tfidf_cosine_sim",
+    "intent_has_brand",
+    "cart_has_brand",
+    "brand_conflict",
+    "intent_specificity",
+    "cart_category_match",
+    "quantity_mismatch",
     "amount_to_cap_ratio",
-    "amount_minor_units",
-    "log_amount",
-    "days_until_expiry",
-    "days_since_issued",
-    "mandate_age_fraction",
-    "cart_item_count",
-    "cart_total_minor_units",
-    "amount_to_cart_ratio",
-    "max_amount_set",
-    "merchants_restricted",
-    "categories_restricted",
-    "has_delegation_token",
-    "cart_hash_pinned",
-    "intent_cart_name_overlap",
-)
+]
+
+
+def _tokenize(text: str) -> list[str]:
+    return re.findall(r"[a-zA-Z0-9]+", text.lower())
+
+
+def _trigrams(text: str) -> set[str]:
+    t = text.lower()
+    return {t[i : i + 3] for i in range(len(t) - 2)}
+
+
+def _jaccard(a: set, b: set) -> float:
+    if not a and not b:
+        return 1.0
+    u = a | b
+    if not u:
+        return 0.0
+    return len(a & b) / len(u)
+
+
+def _has_brand(text: str) -> float:
+    tokens = re.findall(r"[A-Za-z0-9]+", text)
+    for tok in tokens:
+        if (
+            tok[0].isupper()
+            and len(tok) > 3
+            and tok.lower() not in STOPWORDS
+        ):
+            return 1.0
+    return 0.0
+
+
+def _extract_first_int(text: str) -> int | None:
+    m = re.search(r"\b(\d+)\b", text)
+    return int(m.group(1)) if m else None
 
 
 def extract_features(
-    intent: IntentMandate,
-    cart: CartMandate,
-    token: DelegationToken | None,
-    transaction_amount: Money,
-    merchant_id: str,
-    mcc: str,
-    now: datetime,
+    record: dict[str, Any],
+    tfidf_vectorizer=None,
 ) -> list[float]:
-    """Return exactly len(FEATURE_NAMES) floats in FEATURE_NAMES order."""
-    if intent.scope.max_amount is None:
-        amount_to_cap_ratio = -1.0
-    else:
-        amount_to_cap_ratio = (
-            transaction_amount.minor_units / intent.scope.max_amount.minor_units
-        )
-
-    amount_minor_units = float(transaction_amount.minor_units)
-    log_amount = math.log1p(transaction_amount.minor_units)
-
-    days_until_expiry = float((intent.expires_at - now).days)
-    days_since_issued = float((now - intent.issued_at).days)
-    total_age = days_since_issued + days_until_expiry
-    mandate_age_fraction = 0.0 if total_age <= 0.0 else days_since_issued / total_age
-
-    cart_item_count = float(len(cart.items))
-    cart_total_minor_units = float(cart.total.minor_units)
-
-    if cart.total.minor_units == 0:
-        amount_to_cart_ratio = 0.0
-    else:
-        amount_to_cart_ratio = transaction_amount.minor_units / cart.total.minor_units
-
-    max_amount_set = 1.0 if intent.scope.max_amount is not None else 0.0
-    merchants_restricted = 1.0 if intent.scope.merchants is not None else 0.0
-    categories_restricted = 1.0 if intent.scope.categories is not None else 0.0
-    has_delegation_token = 1.0 if token is not None else 0.0
-    cart_hash_pinned = 1.0 if intent.cart_hash is not None else 0.0
-
-    features = [
-        amount_to_cap_ratio,
-        amount_minor_units,
-        log_amount,
-        days_until_expiry,
-        days_since_issued,
-        mandate_age_fraction,
-        cart_item_count,
-        cart_total_minor_units,
-        amount_to_cart_ratio,
-        max_amount_set,
-        merchants_restricted,
-        categories_restricted,
-        has_delegation_token,
-        cart_hash_pinned,
-    ]
-
-    if not intent.purchase_intent:
-        intent_cart_overlap = -1.0
-    else:
-        intent_tokens = set(intent.purchase_intent.lower().split())
-        cart_text = " ".join(item.name.lower() for item in cart.items)
-        cart_tokens = set(cart_text.split())
-        if not intent_tokens:
-            intent_cart_overlap = -1.0
-        else:
-            matched = intent_tokens & cart_tokens
-            intent_cart_overlap = len(matched) / len(intent_tokens)
-
-    features.append(intent_cart_overlap)
-
-    assert len(features) == len(FEATURE_NAMES), (
-        f"feature count mismatch: {len(features)} != {len(FEATURE_NAMES)}"
+    intent: str = str(record.get("purchase_intent") or "")
+    cart_items: list = record.get("cart_items") or []
+    cart_text: str = " ".join(
+        str(item.get("name") or "") for item in cart_items
     )
-    return features
+
+    # 1. jaccard_token_overlap
+    intent_tokens = set(_tokenize(intent))
+    cart_tokens = set(_tokenize(cart_text))
+    jaccard = _jaccard(intent_tokens, cart_tokens)
+
+    # 2. char_trigram_overlap
+    trigram_sim = _jaccard(_trigrams(intent), _trigrams(cart_text))
+
+    # 3. tfidf_cosine_sim
+    if tfidf_vectorizer is not None and intent and cart_text:
+        try:
+            from sklearn.metrics.pairwise import cosine_similarity
+            vecs = tfidf_vectorizer.transform([intent, cart_text])
+            tfidf_sim = float(cosine_similarity(vecs[0], vecs[1])[0][0])
+        except Exception:
+            tfidf_sim = 0.0
+    else:
+        tfidf_sim = 0.0
+
+    # 4. intent_has_brand
+    intent_has_brand = _has_brand(intent)
+
+    # 5. cart_has_brand
+    cart_has_brand = _has_brand(cart_text)
+
+    # 6. brand_conflict
+    brand_conflict = (
+        1.0
+        if (intent_has_brand == 1.0 and cart_has_brand == 1.0 and tfidf_sim < 0.3)
+        else 0.0
+    )
+
+    # 7. intent_specificity
+    intent_words = _tokenize(intent)
+    content_words = [w for w in intent_words if w not in STOPWORDS]
+    intent_specificity = (
+        len(content_words) / max(1, len(intent_words)) if intent_words else 0.0
+    )
+
+    # 8. cart_category_match
+    first_content = next(
+        (w for w in _tokenize(intent) if w not in STOPWORDS), None
+    )
+    cart_category_match = (
+        1.0
+        if first_content and first_content in _tokenize(cart_text)
+        else 0.0
+    )
+
+    # 9. quantity_mismatch
+    intent_qty = _extract_first_int(intent)
+    cart_qty = None
+    if cart_items:
+        raw = cart_items[0].get("quantity")
+        try:
+            cart_qty = int(raw) if raw is not None else None
+        except (ValueError, TypeError):
+            cart_qty = None
+    if intent_qty is not None and cart_qty is not None and cart_qty > 0:
+        ratio = intent_qty / cart_qty
+        quantity_mismatch = 1.0 if ratio > 2.0 or ratio < 0.5 else 0.0
+    else:
+        quantity_mismatch = 0.0
+
+    # 10. amount_to_cap_ratio
+    amount = record.get("amount_minor_units") or 0
+    cap = record.get("per_txn_cap_minor_units") or 0
+    amount_to_cap_ratio = (amount / cap) if cap > 0 else 0.0
+
+    return [
+        jaccard,
+        trigram_sim,
+        tfidf_sim,
+        intent_has_brand,
+        cart_has_brand,
+        brand_conflict,
+        intent_specificity,
+        cart_category_match,
+        quantity_mismatch,
+        amount_to_cap_ratio,
+    ]

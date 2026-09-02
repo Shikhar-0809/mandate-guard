@@ -196,17 +196,7 @@ def score_baseline(name: BaselineName, record: dict[str, object]) -> float:
 
 
 def score_t1(record: dict[str, object], model_dir: Path) -> float:
-    args = _record_to_t0_args(record)
-    return t1_score(
-        args["intent"],
-        args["cart"],
-        args["token"],
-        args["transaction_amount"],
-        args["merchant_id"],
-        args["mcc"],
-        args["now"],
-        model_dir,
-    )
+    return t1_score(record, model_dir)
 
 
 def score_t0_t1(record: dict[str, object], model_dir: Path) -> float:

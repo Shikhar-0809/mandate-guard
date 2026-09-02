@@ -75,6 +75,20 @@ def trained_model_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
     _load_model.cache_clear()
 
 
+def _make_record(
+    purchase_intent: str = "",
+    cart_name: str = "USB Cable",
+    amount_minor_units: int = 1000,
+    per_txn_cap_minor_units: int = 10000,
+) -> dict:
+    return {
+        "purchase_intent": purchase_intent,
+        "cart_items": [{"name": cart_name, "quantity": 1}],
+        "amount_minor_units": amount_minor_units,
+        "per_txn_cap_minor_units": per_txn_cap_minor_units,
+    }
+
+
 def test_train_returns_metrics(tmp_path: Path) -> None:
     metrics = train(DEV_RECORDS, tmp_path)
     assert set(metrics.keys()) >= {"auc", "precision", "recall", "ece"}
@@ -100,54 +114,18 @@ def test_baselines_written(tmp_path: Path) -> None:
 
 def test_score_valid_transaction(trained_model_dir: Path) -> None:
     _load_model.cache_clear()
-    prob = score(
-        VALID_INTENT,
-        VALID_CART,
-        None,
-        Money(1000, "INR"),
-        VALID_MERCHANT,
-        VALID_MCC,
-        BASE_NOW,
-        trained_model_dir,
-    )
+    prob = score(_make_record(amount_minor_units=1000), trained_model_dir)
     assert 0.0 <= prob <= 1.0
 
 
 def test_score_attack_transaction(trained_model_dir: Path) -> None:
     _load_model.cache_clear()
-    prob = score(
-        VALID_INTENT,
-        VALID_CART,
-        None,
-        Money(20000, "INR"),
-        VALID_MERCHANT,
-        VALID_MCC,
-        BASE_NOW,
-        trained_model_dir,
-    )
+    prob = score(_make_record(amount_minor_units=20000), trained_model_dir)
     assert 0.0 <= prob <= 1.0
 
 
 def test_score_deterministic(trained_model_dir: Path) -> None:
     _load_model.cache_clear()
-    prob1 = score(
-        VALID_INTENT,
-        VALID_CART,
-        None,
-        Money(1000, "INR"),
-        VALID_MERCHANT,
-        VALID_MCC,
-        BASE_NOW,
-        trained_model_dir,
-    )
-    prob2 = score(
-        VALID_INTENT,
-        VALID_CART,
-        None,
-        Money(1000, "INR"),
-        VALID_MERCHANT,
-        VALID_MCC,
-        BASE_NOW,
-        trained_model_dir,
-    )
+    prob1 = score(_make_record(amount_minor_units=1000), trained_model_dir)
+    prob2 = score(_make_record(amount_minor_units=1000), trained_model_dir)
     assert prob1 == prob2

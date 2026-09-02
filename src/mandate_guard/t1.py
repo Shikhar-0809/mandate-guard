@@ -176,20 +176,30 @@ def train(
     model_dir: Path,
 ) -> dict[str, float]:
     """Train a calibrated LightGBM model and write baselines.json."""
+    from sklearn.feature_extraction.text import TfidfVectorizer
+
+    tfidf_corpus = []
+    for record in records:
+        intent = str(record.get("purchase_intent") or "")
+        cart_items = record.get("cart_items") or []
+        cart_text = " ".join(
+            str(item.get("name") or "") for item in cart_items
+        )
+        tfidf_corpus.append(intent + " " + cart_text)
+
+    tfidf_vec = TfidfVectorizer(
+        analyzer="word",
+        ngram_range=(1, 2),
+        min_df=1,
+        sublinear_tf=True,
+    )
+    tfidf_vec.fit(tfidf_corpus)
+
     feature_rows: list[list[float]] = []
     labels: list[float] = []
     for record in records:
-        args = _record_to_args(record)
         feature_rows.append(
-            extract_features(
-                args.intent,
-                args.cart,
-                args.token,
-                args.transaction_amount,
-                args.merchant_id,
-                args.mcc,
-                args.now,
-            )
+            extract_features(record, tfidf_vectorizer=tfidf_vec)
         )
         labels.append(1.0 if str(record["label"]) == "BLOCK" else 0.0)
 
@@ -222,6 +232,7 @@ def train(
     ece = _ece(y_test, y_prob)
 
     model_dir.mkdir(parents=True, exist_ok=True)
+    joblib.dump(tfidf_vec, model_dir / "tfidf_vectorizer.joblib")
     joblib.dump(clf, model_dir / "t1_model.joblib")
     (model_dir / "feature_names.json").write_text(
         json.dumps(list(FEATURE_NAMES)),
@@ -262,27 +273,20 @@ def _load_model(model_dir: Path) -> CalibratedClassifierCV:
     return clf
 
 
+@lru_cache(maxsize=1)
+def _load_tfidf(model_dir: Path):
+    tfidf_path = model_dir / "tfidf_vectorizer.joblib"
+    return joblib.load(tfidf_path) if tfidf_path.exists() else None
+
+
 def score(
-    intent: IntentMandate,
-    cart: CartMandate,
-    token: DelegationToken | None,
-    transaction_amount: Money,
-    merchant_id: str,
-    mcc: str,
-    now: datetime,
+    record: dict[str, object],
     model_dir: Path,
 ) -> float:
-    """Return calibrated BLOCK probability for a transaction."""
+    """Return calibrated BLOCK probability for a transaction record."""
     clf = _load_model(model_dir)
-    features = extract_features(
-        intent,
-        cart,
-        token,
-        transaction_amount,
-        merchant_id,
-        mcc,
-        now,
-    )
+    tfidf_vec = _load_tfidf(model_dir)
+    features = extract_features(record, tfidf_vectorizer=tfidf_vec)
     x = np.array([features])
     prob = float(clf.predict_proba(x)[0, 1])
     assert 0.0 <= prob <= 1.0
