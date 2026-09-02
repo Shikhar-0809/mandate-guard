@@ -2,8 +2,6 @@
 
 All features must be observable at PSP inference time from the transaction
 inputs alone. No generation metadata (family, note, family_note) is used.
-Features 15-21 repackage T0's hard decisions as continuous signals so T1 can
-learn patterns in the near-violation zone.
 """
 
 from __future__ import annotations
@@ -12,8 +10,6 @@ import math
 from datetime import datetime
 
 from contracts import CartMandate, DelegationToken, IntentMandate, Money
-
-from .t0 import check as t0_check
 
 FEATURE_NAMES: tuple[str, ...] = (
     "amount_to_cap_ratio",
@@ -30,13 +26,6 @@ FEATURE_NAMES: tuple[str, ...] = (
     "categories_restricted",
     "has_delegation_token",
     "cart_hash_pinned",
-    "merchant_in_scope",
-    "category_in_scope",
-    "amount_over_cap",
-    "cart_hash_match",
-    "mandate_id_match",
-    "t0_passed",
-    "t0_trigger_count",
     "intent_cart_name_overlap",
 )
 
@@ -80,40 +69,6 @@ def extract_features(
     has_delegation_token = 1.0 if token is not None else 0.0
     cart_hash_pinned = 1.0 if intent.cart_hash is not None else 0.0
 
-    if intent.scope.merchants is None:
-        merchant_in_scope = 1.0
-    else:
-        merchant_in_scope = 1.0 if merchant_id in intent.scope.merchants else 0.0
-
-    if intent.scope.categories is None:
-        category_in_scope = 1.0
-    else:
-        category_in_scope = 1.0 if mcc in intent.scope.categories else 0.0
-
-    if intent.scope.max_amount is None:
-        amount_over_cap = 0.0
-    else:
-        amount_over_cap = 1.0 if transaction_amount > intent.scope.max_amount else 0.0
-
-    if intent.cart_hash is None:
-        cart_hash_match = 1.0
-    else:
-        cart_hash_match = 1.0 if cart.cart_hash == intent.cart_hash else 0.0
-
-    mandate_id_match = 1.0 if cart.mandate_id == intent.mandate_id else 0.0
-
-    t0_result = t0_check(
-        intent,
-        cart,
-        token,
-        transaction_amount,
-        merchant_id,
-        mcc,
-        now,
-    )
-    t0_passed = 1.0 if t0_result.passed else 0.0
-    t0_trigger_count = float(len(t0_result.triggered_rules))
-
     features = [
         amount_to_cap_ratio,
         amount_minor_units,
@@ -129,13 +84,6 @@ def extract_features(
         categories_restricted,
         has_delegation_token,
         cart_hash_pinned,
-        merchant_in_scope,
-        category_in_scope,
-        amount_over_cap,
-        cart_hash_match,
-        mandate_id_match,
-        t0_passed,
-        t0_trigger_count,
     ]
 
     if not intent.purchase_intent:

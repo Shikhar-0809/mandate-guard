@@ -1,11 +1,11 @@
 {
-  "t1_auc": 1.0,
+  "t1_auc": 0.6622465818010373,
   "t1_precision": 1.0,
-  "t1_recall": 1.0,
-  "t1_ece": 1.7380417219974772e-05,
+  "t1_recall": 0.30952380952380953,
+  "t1_ece": 0.029744029657121283,
   "trained_on_n": 1216,
   "holdout_n": 244,
-  "feature_count": 22,
+  "feature_count": 15,
   "eval_tau_star": 1.0,
   "eval_recall_seen": 1.0,
   "eval_recall_unseen": 0.8333333333333334,
@@ -20,10 +20,5 @@
     "amount_threshold",
     "regex_injection_detector",
     "t0_only"
-  ],
-  "eval_recall_unseen_t2": 1.0,
-  "eval_t2_lift": 0.16666666666666663,
-  "eval_t2_kill_criterion_met": true,
-  "eval_t2_invocations": 25,
-  "eval_t2_blocked": 25
+  ]
 }

@@ -60,7 +60,7 @@ def run_extract(**overrides: object) -> list[float]:
 
 def test_feature_count() -> None:
     features = run_extract()
-    assert len(features) == len(FEATURE_NAMES) == 22
+    assert len(features) == len(FEATURE_NAMES) == 15
 
 
 def test_all_finite() -> None:
@@ -90,42 +90,6 @@ def test_amount_to_cap_ratio_no_cap() -> None:
     features = run_extract(intent=intent)
     index = FEATURE_NAMES.index("amount_to_cap_ratio")
     assert features[index] == -1.0
-
-
-def test_merchant_in_scope_true() -> None:
-    features = run_extract()
-    index = FEATURE_NAMES.index("merchant_in_scope")
-    assert features[index] == 1.0
-
-
-def test_merchant_not_in_scope() -> None:
-    features = run_extract(merchant_id="other.merchant")
-    index = FEATURE_NAMES.index("merchant_in_scope")
-    assert features[index] == 0.0
-
-
-def test_t0_passed_for_valid_transaction() -> None:
-    features = run_extract()
-    index = FEATURE_NAMES.index("t0_passed")
-    assert features[index] == 1.0
-
-
-def test_t0_passed_for_invalid_transaction() -> None:
-    features = run_extract(transaction_amount=Money(20000, "INR"))
-    index = FEATURE_NAMES.index("t0_passed")
-    assert features[index] == 0.0
-
-
-def test_t0_trigger_count_zero_for_valid() -> None:
-    features = run_extract()
-    index = FEATURE_NAMES.index("t0_trigger_count")
-    assert features[index] == 0.0
-
-
-def test_t0_trigger_count_positive_for_invalid() -> None:
-    features = run_extract(transaction_amount=Money(20000, "INR"))
-    index = FEATURE_NAMES.index("t0_trigger_count")
-    assert features[index] > 0.0
 
 
 def test_deterministic() -> None:

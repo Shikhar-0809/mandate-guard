@@ -189,6 +189,7 @@ def main() -> None:
         sealed_scores_t2: list[float] = []
         t2_invoked = 0
         t2_blocked = 0
+        t2_actually_invoked = 0
 
         for record in sealed_records:
             base_score = score_t0_t1(record, model_dir)
@@ -206,6 +207,8 @@ def main() -> None:
                     t2_config,
                 )
                 t2_invoked += 1
+                if result.invoked:
+                    t2_actually_invoked += 1
                 if result.invoked and result.verdict.value == "BLOCK":
                     sealed_scores_t2.append(1.0)
                     t2_blocked += 1
@@ -213,6 +216,11 @@ def main() -> None:
                     sealed_scores_t2.append(base_score)
             else:
                 sealed_scores_t2.append(base_score)
+
+        if t2_invoked > 0 and t2_actually_invoked == 0:
+            print("ERROR: T2 was called but Ollama returned no invoked=True results.")
+            print("All T2 results were degraded. baselines.json will NOT be updated.")
+            sys.exit(1)
 
         recall_unseen_t2 = recall_on_records(sealed_records, sealed_scores_t2, tau_star)
         lift = recall_unseen_t2 - recall_unseen

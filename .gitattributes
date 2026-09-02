@@ -1,0 +1,6 @@
+# Force LF line endings for corpus files so SHA256 is stable across platforms
+*.jsonl text eol=lf
+*.json  text eol=lf
+*.py    text eol=lf
+*.md    text eol=lf
+*.txt   text eol=lf
