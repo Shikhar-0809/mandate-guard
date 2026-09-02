@@ -18,7 +18,7 @@ that sees the money move: the PSP.
 | Tier | Runs on | p99 | Cost/call |
 |------|---------|-----|-----------|
 | T0 deterministic mandate constraints | 100% | ~3 ms | ₹0 |
-| T1 calibrated GBM, 40–60 features | 100% | ~10 ms | ₹0 |
+| T1 calibrated GBM, 15 features | 100% | ~10 ms | ₹0 |
 | T2 LLM semantic verifier | ≤0.5% | 600–1500 ms | ₹0.4–2.0 |
 
 T0 checks: amount vs per-txn cap, cumulative vs period cap, beneficiary in
@@ -30,14 +30,17 @@ amount, beneficiary, category), integrity violations (cart hash),
 and structural delegation violations (scope expansion, mandate ID).
 Behavioral/semantic risk at the content level is T1/T2 territory.
 
-T1 runs on 100% deliberately — a censored score distribution blinds drift monitors.
+T1 runs on 100% deliberately — a censored score distribution blinds drift
+monitors. Post-ablation (D011): 15 features covering mandate structure and
+intent-cart lexical overlap. T0-derived features removed after audit confirmed
+leakage (t1_auc was 1.0 due to t0_passed label proxy). Current t1_auc=0.6622;
+T1 contributes zero detection value at tau*=1.0 on the current corpus — the
+semantic attack family (13) requires T2, not structural ML.
 
-T2 gate: T0 passed AND `purchase_intent` is non-empty AND
-(`calibrated_score ∈ [τ_low, τ_high]` OR `deviation_type ∈
-{SKU_SEMANTIC, BENEFICIARY_IDENTITY}`). Numeric deviation never
-reaches T2; arithmetic does not need a language model. When
-`purchase_intent` is empty, semantic verification is impossible
-and T2 is not invoked.
+T2 gate: T0 passed AND `purchase_intent` non-empty (D010). Numeric deviation
+never reaches T2; arithmetic does not need a language model. Semantic deviation
+requires T2; structural ML (T1) cannot separate semantic attacks from hard
+negatives at the current feature set.
 
 ## Invariants
 
@@ -61,10 +64,10 @@ and T2 is not invoked.
 10. Every field in a log or audit envelope is schema-declared with a `pii` class.
 
 ## Verdicts
-`ALLOW` / `HOLD` / `BLOCK`. Three-way rather than binary because HOLD
-costs ~₹45 against BLOCK at ~₹320 — the deferral window is a property of
-the rail, so exploit it. CHALLENGE is absent: no challenge flow exists or
-will be built; HOLD is the correct deferral state.
+`ALLOW` / `HOLD` / `BLOCK`. Three-way rather than binary because
+HOLD costs ~₹45 against BLOCK at ~₹320 — the deferral window is a property of
+the rail, so exploit it.
+CHALLENGE was removed (D007): no step-up authentication flow exists.
 
 ## Cost matrix
 All inputs are ASSUMPTIONS until cited in `config/cost_model.yaml`.
@@ -84,7 +87,7 @@ requires calibration — report ECE.
 | Failure | Degrade to | Open or closed |
 |---------|-----------|----------------|
 | T2 down | T1 with shifted threshold | fail to HOLD |
-| T1 down | T0 only | fail open below per-txn cap, CHALLENGE above |
+| T1 down | T0 only | fail open below per-txn cap, HOLD above |
 | Features down | T0 + request-local | fail open, log `DEGRADED_FEATURES` |
 | Store down | reject 503 | fail CLOSED — cannot verify consent |
 
