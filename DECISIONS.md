@@ -213,3 +213,15 @@ Choice: Remove brand_conflict. Feature count drops 8→7.
 Rejected: Keeping it as a documented zero-importance feature. Dead code
 in a feature vector is a maintenance liability and a false signal.
 Revisit: If cart_has_brand is restored with a working brand taxonomy.
+
+## D019 — Disclose sealed-set protocol violation in EVAL.md (D20)
+Date: 2026-09-02
+Context: EVAL.md stated sealed set as families 8-12. Family 13 was added
+post-hoc after D008 T2 failure and was inspected during development, violating
+RULES 19. The doc did not reflect this.
+Choice: Update EVAL.md to split original sealed (8-12) from post-hoc challenge
+(13), and explicitly state the RULES 19 violation.
+Rejected: Removing family 13 from reporting. Post-hoc results are still useful
+when disclosed honestly as exploratory, not pre-registered.
+Revisit: When a genuinely pre-registered sealed set for family 13 equivalents
+exists.
