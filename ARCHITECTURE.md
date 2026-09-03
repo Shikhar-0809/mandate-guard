@@ -31,11 +31,10 @@ and structural delegation violations (scope expansion, mandate ID).
 Behavioral/semantic risk at the content level is T1/T2 territory.
 
 T1 runs on 100% deliberately — a censored score distribution blinds drift
-monitors. Post-ablation (D011, D013): 10 semantic comparison features covering
-intent-cart similarity, brand detection, and structural amount ratio. T0-derived features removed after audit confirmed
-leakage (t1_auc was 1.0 due to t0_passed label proxy). Current t1_auc=0.6622;
-T1 contributes zero detection value at tau*=1.0 on the current corpus — the
-semantic attack family (13) requires T2, not structural ML.
+monitors. Post-ablation (D011, D013): 10 semantic features (intent-cart
+similarity, brand detection, amount ratio). T0-derived features removed after
+leakage audit (t1_auc was 1.0 via t0_passed proxy). Current t1_auc=0.6622;
+T2 required for semantic family 13 — T1 contributes zero at tau*=1.0.
 
 T2 gate: `purchase_intent` populated AND (`amount ≥ X` OR `deviation_type ∈ {SKU_SEMANTIC, BENEFICIARY_IDENTITY}`). Numeric deviation never reaches T2; arithmetic does not need a language model.
 
@@ -80,12 +79,14 @@ requires calibration — report ECE.
 
 ## Degradation
 
-| Failure | Degrade to | Open or closed |
-|---------|-----------|----------------|
-| T2 down | T1 with shifted threshold | fail to HOLD |
-| T1 down | T0 only | fail open below per-txn cap, HOLD above |
-| Features down | T0 + request-local | fail open, log `DEGRADED_FEATURES` |
-| Store down | reject 503 | fail CLOSED — cannot verify consent |
+| Failure | Degrade to | Open or closed | Expected loss vs nominal |
+|---------|-----------|----------------|--------------------------|
+| T2 down | T1 with shifted threshold | fail to HOLD | +₹0 (T2 handles ≤0.5% of volume; HOLD at ₹45 vs expected T2 BLOCK saving) |
+| T1 down | T0 only | fail open below per-txn cap, HOLD above | ~+₹29/1k txns at 0.8% prior (ASSUMPTION: FN rate rises from 0% to 2% on T0-passing attacks) |
+| Features down | T0 + request-local | fail open, log `DEGRADED_FEATURES` | ~+₹12/1k txns (ASSUMPTION: partial feature loss degrades T1 recall by ~50%) |
+| Store down | reject 503 | fail CLOSED — cannot verify consent | ₹0 fraud loss; availability cost only |
+
+Expected-loss estimates are ASSUMPTIONS under the cost matrix above (FN ₹1470, FP ₹320, HOLD ₹45, prior 0.8%). Full sensitivity in EVAL.md.
 
 ## T2 state machine
 See `docs/T2_STATE_MACHINE.md`. States: RECEIVED → T0_DECIDED → T1_SCORED →
@@ -97,8 +98,7 @@ SQLite for decisions/mandates/config. In-process counters. Local FS audit
 envelopes. Outbox table, not Kafka. Postgres/Redis/ObjectLock are STUB seams
 running the same contract suite.
 
-First bottleneck is the SQLite single writer, found empirically by
-`make bench-limits`, not asserted.
+First bottleneck is the SQLite single writer, found empirically, not asserted.
 
 ## Trust boundary
 Untrusted inputs: merchant catalog text, product descriptions and reviews,

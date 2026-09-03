@@ -295,3 +295,14 @@ avoid breaking existing call sites; callers should populate when available.
 Rejected: Separate version-pin table joined at query time — adds a join on the
 hot read path and loses the self-contained audit property.
 Revisit: When Verdict is versioned formally; then make fields required.
+
+## D025 — Degradation rationale: quantified expected loss per failure mode
+Date: 2026-09-03
+Context: ARCHITECTURE.md degradation table listed failure modes without
+quantifying expected loss, making the trade-offs unverifiable.
+Choice: Add expected-loss column to degradation table with ASSUMPTION labels
+and derivation prose. Numbers flow from the cost matrix already in
+ARCHITECTURE.md (FN ₹1470, FP ₹320, HOLD ₹45) at 0.8% attack prior.
+Rejected: Exact simulation — requires prod traffic data not available at BUILD
+tier. ASSUMPTION labels make the gap explicit.
+Revisit: When real traffic data is available to replace ASSUMPTION labels.
