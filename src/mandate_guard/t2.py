@@ -43,6 +43,8 @@ _DEGRADED_OUTPUT = VerifierOutput(
     degraded_reason=_DEGRADED_REASON,
 )
 
+T2_CONFIDENCE_FLOOR: float = 0.70
+
 
 @dataclass(frozen=True)
 class UntrustedBlob:
@@ -61,6 +63,24 @@ class UntrustedBlob:
     def __post_init__(self) -> None:
         if not self.source:
             raise ValueError("source must not be empty")
+
+
+def _normalize_confidence(raw_confidence: object) -> float:
+    if raw_confidence is None:
+        return 0.0
+    confidence = float(raw_confidence)
+    return max(0.0, min(1.0, confidence))
+
+
+def _apply_confidence_floor(
+    verdict: VerdictState,
+    confidence: float,
+) -> tuple[VerdictState, str | None]:
+    degraded_reason = None
+    if verdict == VerdictState.BLOCK and confidence < T2_CONFIDENCE_FLOOR:
+        verdict = VerdictState.HOLD
+        degraded_reason = "DEGRADED_T2_LOW_CONFIDENCE"
+    return verdict, degraded_reason
 
 
 def _call_ollama(
@@ -141,8 +161,17 @@ def _call_ollama(
         verdict_str = str(parsed.get("verdict", "HOLD")).upper()
         verdict = VerdictState(verdict_str)
         evidence_text = str(parsed.get("evidence", ""))
-        confidence = float(parsed.get("confidence", 0.0))
-        confidence = max(0.0, min(1.0, confidence))
+        confidence = _normalize_confidence(parsed.get("confidence", 0.0))
+        verdict, degraded_reason = _apply_confidence_floor(verdict, confidence)
+
+        if degraded_reason is not None:
+            return VerifierOutput(
+                verdict=verdict,
+                evidence_spans=(),
+                confidence=confidence,
+                invoked=False,
+                degraded_reason=degraded_reason,
+            )
 
         span = (
             EvidenceSpan(

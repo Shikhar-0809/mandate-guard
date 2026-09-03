@@ -273,3 +273,14 @@ Choice: TF-IDF cosine threshold (sim < 0.3 → BLOCK) and logistic regression
 on TF-IDF features trained on dev corpus.
 Rejected: Sentence-embedding cosine — not installable offline.
 Revisit: Add sentence-embedding baseline when online evaluation is possible.
+
+## D023 — T2 confidence floor: BLOCK below 0.70 → HOLD
+Date: 2026-09-03
+Context: A 7B model can return BLOCK with low confidence on ambiguous inputs.
+A low-confidence BLOCK has the same operational cost as HOLD but forecloses
+the deferral window. Better to HOLD and let the rail timeout resolve it.
+Choice: confidence < 0.70 on a BLOCK verdict → demote to HOLD, log
+DEGRADED_T2_LOW_CONFIDENCE. Floor is a named constant T2_CONFIDENCE_FLOOR.
+Rejected: Dropping low-confidence verdicts to ALLOW — wrong direction on
+the cost asymmetry (FN costs 4.6× FP).
+Revisit: If a larger T2 model is substituted and calibration improves.
