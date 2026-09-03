@@ -1,3 +1,7 @@
 [[tool.mypy.overrides]]
 module = "razorpay.*"
 ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+pythonpath = [".", "src"]
+asyncio_mode = "strict"
