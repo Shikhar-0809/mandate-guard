@@ -47,8 +47,11 @@ development (RULES 19 violation, disclosed). Families 8–12 remain clean.
 
 - Shuffled-label AUC must land in [0.45, 0.55]
 - Generator-provenance probe AUC must be < 0.60
-- FP rate on Corpus B must exceed Corpus A by a stated margin, or the hard
-  negatives are not hard
+- FP rate on Corpus B must exceed Corpus A by ≥5 percentage points (ASSUMPTION:
+  margin chosen to ensure hard negatives are meaningfully harder than benign
+  base traffic). Current measured gap: Corpus B FPR=10.19% (HOLD+BLOCK),
+  Corpus A FPR≈0% — margin satisfied. If gap falls below 5pp, hard negatives
+  are not hard and the archetype set must be revised.
 
 ## Baselines to beat
 

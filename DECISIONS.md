@@ -320,3 +320,12 @@ fraudulent; the archetype tests the system's ability to surface suspicion, not
 to auto-block.
 Revisit: If real chargeback data shows this archetype is predominantly
 fraudulent, promote to a labeled attack family.
+
+## D027 — Corpus B FPR margin stated explicitly in EVAL.md
+Date: 2026-09-03
+Context: EVAL.md said "FP rate on Corpus B must exceed Corpus A by a stated
+margin" without stating the margin, making the gate unverifiable.
+Choice: State ≥5pp as the margin (ASSUMPTION). Current gap is ~10pp (HOLD+BLOCK
+on 206 HN records vs ~0% on benign). Gate is satisfied.
+Rejected: Leaving the margin unstated — an unverifiable gate is not a gate.
+Revisit: When real traffic data replaces synthetic Corpus A base rates.
