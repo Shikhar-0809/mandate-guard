@@ -339,3 +339,12 @@ not measurements. No production traffic exists at BUILD tier.
 Rejected: Removing the figures — they anchor the architecture discussion and
 are useful as targets even without measurement.
 Revisit: When benchmark data from make bench-limits is available.
+
+## D029 — Cost/call ₹0 relabeled to clarify benchmark scope
+Date: 2026-09-03
+Context: ₹0 cost/call for T0 and T1 implied zero cost universally. This is
+only true in the benchmark environment with no external API calls.
+Choice: Relabel ₹0 as ₹0†† with footnote "no marginal API cost in benchmark
+environment; excludes infrastructure."
+Rejected: Removing the cost column — it anchors the tier comparison.
+Revisit: When infrastructure cost data is available.

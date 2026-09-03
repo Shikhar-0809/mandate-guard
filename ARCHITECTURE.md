@@ -14,13 +14,13 @@ prove the agent did what it was authorised to do. That check belongs at the part
 that sees the money move: the PSP.
 
 ## Tiers
-
 | Tier | Runs on | p99 target | Cost/call |
 |------|---------|------------|-----------|
-| T0 deterministic mandate constraints | 100% | ~3 ms† | ₹0 |
-| T1 calibrated GBM, 10 features | 100% | ~10 ms† | ₹0 |
+| T0 deterministic mandate constraints | 100% | ~3 ms† | ₹0†† |
+| T1 calibrated GBM, 10 features | 100% | ~10 ms† | ₹0†† |
 | T2 LLM semantic verifier | ≤0.5% | 600–1500 ms | ₹0.4–2.0 |
 †Design targets, not measurements. No production traffic exists at BUILD tier.
+††No marginal API cost in benchmark environment; excludes infrastructure.
 T0 checks: amount vs per-txn cap, cumulative vs period cap, beneficiary in
 allowlist, MCC allowed, mandate active and in window, pre-debit notification
 satisfied, cart manifest hash matches approved snapshot, delegation scope
