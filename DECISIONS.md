@@ -359,3 +359,16 @@ acceptable. Report the figure honestly rather than omitting it.
 Rejected: Omitting the figure — an evaluator who computes it will find it
 and assume it was hidden deliberately.
 Revisit: When real prior data replaces the 0.8% assumption.
+
+## D031 — recall_unseen clarified: family-level vs record-level
+Date: 2026-09-03
+Context: recall_unseen was reported as a single number without clarifying
+whether it is family-level (any hit counts) or record-level (fraction of
+records). These differ substantially for family 13 (T0+T1: 6/25=0.24
+record-level but 1/1 family-level since T0 blocks some records).
+Choice: Document both granularities in EVAL.md. Report record-level as the
+primary number (stricter, matches baselines.json). Note family-level for
+completeness.
+Rejected: Reporting only family-level — it obscures the T0+T1 weakness on
+family 13 (24 of 25 records missed).
+Revisit: When additional sealed families are added.
