@@ -18,7 +18,6 @@ delegates cart-versus-intent verification to the buyer-side agent — the exact
 component that can be injected. AP2 proves the agent was authorised. It does
 not prove the agent did what it was authorised to do. That check belongs at
 the party that sees the money move: the PSP.
-
 ## Tiers
 | Tier | Runs on | p99 target | Cost/call |
 |------|---------|------------|-----------|
@@ -32,12 +31,7 @@ allowlist, MCC allowed, mandate active and in window, pre-debit notification
 satisfied, cart manifest hash matches approved snapshot, delegation scope
 monotonicity.
 T0 covers authorization, integrity, and structural delegation violations (expiry, amount, beneficiary, category, cart hash, scope, mandate ID). Behavioral/semantic risk is T1/T2 territory.
-T1 runs on 100% deliberately — a censored score distribution blinds drift
-monitors. Post-ablation (D011, D013): 10 semantic features (intent-cart
-similarity, brand detection, amount ratio). T0-derived features removed after
-leakage audit (t1_auc was 1.0 via t0_passed proxy). Current t1_auc=0.6622;
-T2 required for semantic family 13 — T1 contributes zero at tau*=1.0.
-
+T1 runs on 100% deliberately — censored scores blind drift monitors. Post-ablation (D011, D013): 10 semantic features; T0-derived features removed after leakage audit. t1_auc=0.6622; T2 required for family 13.
 T2 gate: `purchase_intent` populated AND (`amount ≥ X` OR `deviation_type ∈ {SKU_SEMANTIC, BENEFICIARY_IDENTITY}`). Numeric deviation never reaches T2; arithmetic does not need a language model.
 
 ## Invariants
@@ -61,9 +55,7 @@ T2 gate: `purchase_intent` populated AND (`amount ≥ X` OR `deviation_type ∈ 
 10. Every field in a log or audit envelope is schema-declared with a `pii` class.
 
 ## Verdicts
-`ALLOW` / `HOLD` / `BLOCK`. Three-way rather than binary because
-HOLD costs ~₹45 against BLOCK at ~₹320 — the deferral window is a property of
-the rail, so exploit it.
+`ALLOW` / `HOLD` / `BLOCK`. Three-way because HOLD costs ~₹45 vs BLOCK ~₹320 — exploit the deferral window.
 
 ## Cost matrix
 All inputs are ASSUMPTIONS until cited in `config/cost_model.yaml`.
@@ -74,9 +66,7 @@ FN   ₹1470  ticket 2600 × 0.22 unrecoverable + 900 dispute ops
 HOLD ₹45
 ```
 
-FN:FP ≈ 4.6:1. This ratio, not F1, chooses the threshold. Per-tenant thresholds
-are derived by expected-cost minimisation over the calibrated probability, which
-requires calibration — report ECE.
+FN:FP ≈ 4.6:1. This ratio, not F1, chooses the threshold; per-tenant thresholds minimise expected cost over calibrated probability — report ECE.
 
 ## Degradation
 | Failure | Degrade to | Open or closed | Expected loss vs nominal |
@@ -98,19 +88,23 @@ SQLite for decisions/mandates/config. In-process counters. Local FS audit
 envelopes. Outbox table, not Kafka. Postgres/Redis/ObjectLock are STUB seams
 running the same contract suite.
 ## Trust boundary
-Untrusted inputs: merchant catalog text, product descriptions and reviews,
-dispute evidence documents, agent rationale strings, third-party tool outputs,
-delegation tokens minted by other agents. All enter as data, never as instruction.
-
-T2 has a closed output schema: `{verdict: enum, evidence_spans, confidence}`.
-It cannot emit an action, a threshold, a scope change, or free text that enters
-control flow.
+Untrusted inputs: catalog text, reviews, dispute docs, agent rationale, tool outputs, delegation tokens — data only, never instruction. T2 output: `{verdict, evidence_spans, confidence}`; no control-flow text.
 ## Audit record
-Hash-chained per tenant, `prev_envelope_hash` on each envelope, hourly signed
-Merkle root. `tools/audit_verify.py` recomputes the chain and reports the first
-divergence. Retention 400 days (dispute cycle), 7-year digest.
+Hash-chained per tenant, `prev_envelope_hash` on each envelope, hourly Merkle root. `tools/audit_verify.py` reports first divergence. Retention 400 days, 7-year digest.
+## Threat-to-tier mapping
+| Threat archetype | Example | Caught by |
+|------------------|---------|-----------|
+| Amount cap violation | Transaction > per-txn cap | T0: AMOUNT_EXCEEDS_CAP |
+| Merchant substitution | Attacker merchant not in allowlist | T0: BENEFICIARY_NOT_ALLOWED |
+| Category violation | MCC not in scope | T0: CATEGORY_NOT_ALLOWED |
+| Cart hash tampering | Cart mutated after approval snapshot | T0: CART_HASH_MISMATCH |
+| Scope expansion | Delegated cap > parent cap | T0: SCOPE_EXPANSION |
+| Mandate ID mismatch | Cart references wrong mandate | T0: MANDATE_ID_MISMATCH |
+| Brand substitution | Sony intent → Bose cart | T1: semantic features |
+| Scope creep | Printer paper intent → laser printer | T1: semantic features |
+| Semantic category drift | Stationary intent → peripherals | T2: LLM verifier |
+| Competitor substitution | Zoom intent → Teams cart | T2: LLM verifier |
+| Post-auth cart mutation | SKU swapped post-authorisation | T1/T2: semantic + hash |
 
 ## Deferred — DOCUMENT tier, reasons in DECISIONS.md
-Partitioning and merchant skew. Storage tiering and retention. Rollout controller
-as running code. Observability UI. Multi-tenancy beyond the cost matrix.
-mTLS, KMS, RBAC, SBOM.
+Partitioning and merchant skew. Storage tiering, rollout controller, observability UI, multi-tenancy, mTLS/KMS/RBAC/SBOM.

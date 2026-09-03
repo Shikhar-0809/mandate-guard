@@ -384,3 +384,14 @@ Rejected: Adding external citations inline — AP2 is a draft protocol; the
 table is self-contained and the repo's gap argument does not depend on a
 specific AP2 version number.
 Revisit: When AP2 is finalised and a stable spec URL is available.
+
+## D033 — Threat-to-tier mapping table added to ARCHITECTURE.md
+Date: 2026-09-03
+Context: The three-tier architecture was described per-tier but not mapped
+to specific threat archetypes. An evaluator cannot verify coverage without
+tracing each threat through the tier descriptions manually.
+Choice: Add ## Threat-to-tier mapping table listing 11 archetypes with the
+tier and rule/mechanism that catches each. Placed before ## Deferred.
+Rejected: Putting this in EVAL.md — it is an architecture claim, not a
+measurement claim. It belongs with the system description.
+Revisit: When new attack families are added to the corpus.
