@@ -95,3 +95,29 @@ def test_verdict_state_serialises_to_plain_strings() -> None:
     assert VerdictState.ALLOW.value == "ALLOW"
     assert VerdictState.HOLD.value == "HOLD"
     assert VerdictState.BLOCK.value == "BLOCK"
+
+
+def test_pinning_fields_set_constructs_without_error() -> None:
+    verdict = _verdict(
+        policy_version="policy-v1",
+        t1_model_hash="sha256:abc123",
+        t2_model_id="qwen2.5:7b",
+    )
+    assert verdict.policy_version == "policy-v1"
+    assert verdict.t1_model_hash == "sha256:abc123"
+    assert verdict.t2_model_id == "qwen2.5:7b"
+
+
+def test_empty_policy_version_raises() -> None:
+    with pytest.raises(ValueError, match="policy_version must not be empty if set"):
+        _verdict(policy_version="")
+
+
+def test_empty_t1_model_hash_raises() -> None:
+    with pytest.raises(ValueError, match="t1_model_hash must not be empty if set"):
+        _verdict(t1_model_hash="")
+
+
+def test_empty_t2_model_id_raises() -> None:
+    with pytest.raises(ValueError, match="t2_model_id must not be empty if set"):
+        _verdict(t2_model_id="")

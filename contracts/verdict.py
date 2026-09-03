@@ -23,6 +23,9 @@ class Verdict:
     frozen_at: datetime
     t1_score: float | None = None
     t2_evidence: str | None = None
+    policy_version: str | None = None
+    t1_model_hash: str | None = None
+    t2_model_id: str | None = None
 
     def __post_init__(self) -> None:
         if not self.reason_code:
@@ -35,3 +38,9 @@ class Verdict:
             raise ValueError("ALLOW verdict is inconsistent with a triggered T0 rule")
         if self.t1_score is not None and not (0.0 <= self.t1_score <= 1.0):
             raise ValueError("t1_score must be in [0.0, 1.0]")
+        if self.policy_version is not None and not self.policy_version:
+            raise ValueError("policy_version must not be empty if set")
+        if self.t1_model_hash is not None and not self.t1_model_hash:
+            raise ValueError("t1_model_hash must not be empty if set")
+        if self.t2_model_id is not None and not self.t2_model_id:
+            raise ValueError("t2_model_id must not be empty if set")

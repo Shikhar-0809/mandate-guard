@@ -99,3 +99,39 @@ def test_direct_construction_with_mismatched_hash_fails_verification() -> None:
         envelope_hash="not-the-real-hash",
     )
     assert envelope.verify_hash() is False
+
+
+PINNED_VERDICT = Verdict(
+    verdict=VerdictState.ALLOW,
+    reason_code="OK",
+    agent_request_id="req-001",
+    mandate_id="mandate-001",
+    t0_triggered=False,
+    frozen_at=FROZEN_AT,
+    policy_version="policy-v1",
+    t1_model_hash="sha256:abc123",
+    t2_model_id="qwen2.5:7b",
+)
+
+
+def test_create_with_pinning_fields_verify_hash_returns_true() -> None:
+    envelope = AuditEnvelope.create(
+        envelope_id="env-pinned",
+        verdict=PINNED_VERDICT,
+        prev_envelope_hash=None,
+    )
+    assert envelope.verify_hash() is True
+
+
+def test_pinning_fields_change_envelope_hash() -> None:
+    unpinned = AuditEnvelope.create(
+        envelope_id="env-pin-test",
+        verdict=BASE_VERDICT,
+        prev_envelope_hash=None,
+    )
+    pinned = AuditEnvelope.create(
+        envelope_id="env-pin-test",
+        verdict=PINNED_VERDICT,
+        prev_envelope_hash=None,
+    )
+    assert pinned.envelope_hash != unpinned.envelope_hash

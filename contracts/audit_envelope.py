@@ -56,6 +56,10 @@ class AuditEnvelope:
             verdict.frozen_at.isoformat(),
             "" if verdict.t1_score is None else str(verdict.t1_score),
             "" if verdict.t2_evidence is None else verdict.t2_evidence,
+            # v2: policy_version, t1_model_hash, t2_model_id added after t2_evidence
+            "" if verdict.policy_version is None else verdict.policy_version,
+            "" if verdict.t1_model_hash is None else verdict.t1_model_hash,
+            "" if verdict.t2_model_id is None else verdict.t2_model_id,
             "" if prev_envelope_hash is None else prev_envelope_hash,
         ]
         return "|".join(parts).encode("utf-8")

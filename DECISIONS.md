@@ -284,3 +284,14 @@ DEGRADED_T2_LOW_CONFIDENCE. Floor is a named constant T2_CONFIDENCE_FLOOR.
 Rejected: Dropping low-confidence verdicts to ALLOW — wrong direction on
 the cost asymmetry (FN costs 4.6× FP).
 Revisit: If a larger T2 model is substituted and calibration improves.
+
+## D024 — Policy/model version pinning in Verdict record
+Date: 2026-09-03
+Context: Frozen verdicts must be reproducible and auditable. Without version
+pins, a re-score after a model update is indistinguishable from the original.
+Choice: Add policy_version, t1_model_hash, t2_model_id as optional fields on
+Verdict. All three enter the audit chain canonical payload (v2). Optional to
+avoid breaking existing call sites; callers should populate when available.
+Rejected: Separate version-pin table joined at query time — adds a join on the
+hot read path and loses the self-contained audit property.
+Revisit: When Verdict is versioned formally; then make fields required.
