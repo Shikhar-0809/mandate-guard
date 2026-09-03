@@ -204,6 +204,42 @@ All intervals use the Wilson score method (z=1.96).
 | T0+T1 recall, families 8-12 | 100 | 100 | 1.000 | [0.9630, 1.0000] |
 | T0+T1 recall, family-13 | 6 | 25 | 0.240 | [0.1150, 0.4343] |
 
+## T2 HOLD breakdown on hard negatives (B9)
+
+T2 invoked against all 206 hard negative records (ALLOW label).
+A BLOCK verdict here is a false positive. A HOLD verdict defers to human
+review (cost ₹45 vs ₹320 for a wrongful block).
+
+**Overall T2 verdicts on hard negatives:**
+
+| Verdict | Count |
+|---------|-------|
+| ALLOW | 184 |
+| HOLD | 21 |
+| BLOCK | 1 |
+| TOTAL | 206 |
+
+**Per-archetype breakdown:**
+
+| Family | ALLOW | HOLD | BLOCK |
+|--------|-------|------|-------|
+| hn_basket_split | 20 | 0 | 0 |
+| hn_currency_rounding | 20 | 0 | 0 |
+| hn_narrowed_delegation | 20 | 0 | 0 |
+| hn_partial_capture | 20 | 0 | 0 |
+| hn_post_snapshot_delivery | 20 | 0 | 0 |
+| hn_price_drift | 20 | 0 | 0 |
+| hn_retry_fresh_idempotency | 20 | 0 | 0 |
+| hn_semantic_ambiguous | 1 | 4 | 1 |
+| hn_stockout_substitution | 4 | 16 | 0 |
+| hn_subscription_stepup | 20 | 0 | 0 |
+| hn_subsidiary_confusability | 19 | 1 | 0 |
+
+Overall at 0.8% prior (206 HN records out of ~25,750 total at that rate):
+- BLOCK rate: 1/206 (0.49%) — false positive rate
+- HOLD rate: 21/206 (10.19%) — deferral rate
+- ALLOW rate: 184/206 (89.32%) — correct pass-through
+
 ## T1 score distributions by family
 
 T1 scores on attack records (dev + sealed) and hard negatives (dev).
