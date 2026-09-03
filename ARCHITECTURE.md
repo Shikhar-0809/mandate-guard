@@ -87,6 +87,11 @@ requires calibration — report ECE.
 | Features down | T0 + request-local | fail open, log `DEGRADED_FEATURES` |
 | Store down | reject 503 | fail CLOSED — cannot verify consent |
 
+## T2 state machine
+See `docs/T2_STATE_MACHINE.md`. States: RECEIVED → T0_DECIDED → T1_SCORED →
+HOLD_PENDING_T2 → FINALIZED. Timeout and parse failure resolve to HOLD, never
+to a retry loop on the blocking path. T2 cannot downgrade a T1 BLOCK.
+
 ## Storage (BUILD tier)
 SQLite for decisions/mandates/config. In-process counters. Local FS audit
 envelopes. Outbox table, not Kafka. Postgres/Redis/ObjectLock are STUB seams
