@@ -56,6 +56,7 @@ def run_scan(root: Path, policy: str) -> subprocess.CompletedProcess[str]:
         capture_output=True,
         text=True,
         check=False,
+        stdin=subprocess.DEVNULL,
     )
 
 

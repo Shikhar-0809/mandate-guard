@@ -65,6 +65,7 @@ DEV_EXPECTED_FAMILIES = {
     "attack_family_7",
     "attack_family_14",
     "attack_family_15",
+    "hn_post_auth_cart_mutation",
 }
 
 SEALED_EXPECTED_FAMILIES = {
@@ -253,7 +254,7 @@ def test_sha256_integrity_sealed() -> None:
 
 def test_dev_record_counts() -> None:
     assert len(load_jsonl(DATA_DEV / "benign.jsonl")) == 800
-    assert len(load_jsonl(DATA_DEV / "hard_negatives.jsonl")) == 206
+    assert len(load_jsonl(DATA_DEV / "hard_negatives.jsonl")) == 226
     assert len(load_jsonl(DATA_DEV / "attacks.jsonl")) == 270
 
 

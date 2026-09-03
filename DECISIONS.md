@@ -395,3 +395,15 @@ tier and rule/mechanism that catches each. Placed before ## Deferred.
 Rejected: Putting this in EVAL.md — it is an architecture claim, not a
 measurement claim. It belongs with the system description.
 Revisit: When new attack families are added to the corpus.
+
+## D034 — subprocess.DEVNULL added to identifier scan test harness
+Date: 2026-09-03
+Context: test_identifier_scan.py failed with OSError [WinError 6] on
+Python 3.14.4/Windows. subprocess.run with capture_output=True inherits
+invalid handles held open by pytest, breaking child process creation.
+Choice: Add stdin=subprocess.DEVNULL to run_scan() to break the handle
+inheritance chain. All 42 affected tests now pass on Windows.
+Rejected: pytest.mark.skipif(sys.platform=="win32") — hides the failure
+rather than fixing it. The scanner logic is correct; the fix is in the
+test harness only.
+Revisit: If Python fixes the handle inheritance regression on Windows.
