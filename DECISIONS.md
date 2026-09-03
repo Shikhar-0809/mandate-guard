@@ -329,3 +329,13 @@ Choice: State ≥5pp as the margin (ASSUMPTION). Current gap is ~10pp (HOLD+BLOC
 on 206 HN records vs ~0% on benign). Gate is satisfied.
 Rejected: Leaving the margin unstated — an unverifiable gate is not a gate.
 Revisit: When real traffic data replaces synthetic Corpus A base rates.
+
+## D028 — Latency figures relabeled as design targets
+Date: 2026-09-03
+Context: ARCHITECTURE.md listed ~3ms and ~10ms p99 figures without noting
+these are design targets, not measurements from production traffic.
+Choice: Rename column to "p99 target" and add a footnote: design targets,
+not measurements. No production traffic exists at BUILD tier.
+Rejected: Removing the figures — they anchor the architecture discussion and
+are useful as targets even without measurement.
+Revisit: When benchmark data from make bench-limits is available.
