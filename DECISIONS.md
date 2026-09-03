@@ -372,3 +372,15 @@ completeness.
 Rejected: Reporting only family-level — it obscures the T0+T1 weakness on
 family 13 (24 of 25 records missed).
 Revisit: When additional sealed families are added.
+
+## D032 — AP2 gap claim: protocol comparison table added
+Date: 2026-09-03
+Context: The AP2 gap argument was stated in prose but not structured as a
+verifiable claim. An evaluator familiar with AP2 should be able to check
+each row independently.
+Choice: Add a four-row comparison table to ## Gap statement showing what AP2
+provides vs what mandate-guard adds. Retain prose below the table.
+Rejected: Adding external citations inline — AP2 is a draft protocol; the
+table is self-contained and the repo's gap argument does not depend on a
+specific AP2 version number.
+Revisit: When AP2 is finalised and a stable spec URL is available.

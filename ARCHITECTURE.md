@@ -1,17 +1,23 @@
 # ARCHITECTURE
-
 ## Loss class
 Mandate deviation: a payment executed by an AI agent under a valid delegated
 mandate, where beneficiary, amount, or purchase intent materially deviates from
 what the principal consented to. Injection, cart tampering, scope expansion and
 counterfeit merchant selection are CAUSES, not separate loss classes.
-
 ## Gap statement
+
+| Property | AP2 mandate | mandate-guard |
+|----------|-------------|---------------|
+| Proves agent was authorised | ✓ | — |
+| Proves cart matches authorised intent | — | ✓ |
+| Verification party | Buyer agent (injectable) | PSP (out of injection path) |
+| Scope of check | Signature validity | Semantic + structural deviation |
+
 AP2 anchors agent purchases in signed Intent, Cart and Payment Mandates, then
 delegates cart-versus-intent verification to the buyer-side agent — the exact
-component that can be injected. AP2 proves the agent was authorised. It does not
-prove the agent did what it was authorised to do. That check belongs at the party
-that sees the money move: the PSP.
+component that can be injected. AP2 proves the agent was authorised. It does
+not prove the agent did what it was authorised to do. That check belongs at
+the party that sees the money move: the PSP.
 
 ## Tiers
 | Tier | Runs on | p99 target | Cost/call |
@@ -25,11 +31,7 @@ T0 checks: amount vs per-txn cap, cumulative vs period cap, beneficiary in
 allowlist, MCC allowed, mandate active and in window, pre-debit notification
 satisfied, cart manifest hash matches approved snapshot, delegation scope
 monotonicity.
-T0 covers three concept classes: authorization violations (expiry,
-amount, beneficiary, category), integrity violations (cart hash),
-and structural delegation violations (scope expansion, mandate ID).
-Behavioral/semantic risk at the content level is T1/T2 territory.
-
+T0 covers authorization, integrity, and structural delegation violations (expiry, amount, beneficiary, category, cart hash, scope, mandate ID). Behavioral/semantic risk is T1/T2 territory.
 T1 runs on 100% deliberately — a censored score distribution blinds drift
 monitors. Post-ablation (D011, D013): 10 semantic features (intent-cart
 similarity, brand detection, amount ratio). T0-derived features removed after
@@ -39,7 +41,6 @@ T2 required for semantic family 13 — T1 contributes zero at tau*=1.0.
 T2 gate: `purchase_intent` populated AND (`amount ≥ X` OR `deviation_type ∈ {SKU_SEMANTIC, BENEFICIARY_IDENTITY}`). Numeric deviation never reaches T2; arithmetic does not need a language model.
 
 ## Invariants
-
 1. The LLM produces evidence. It never holds authority. Enforcement is
    deterministic and lives in the policy engine.
 2. T2 is never on the synchronous blocking path. Mandate rails have a deferral
@@ -78,7 +79,6 @@ are derived by expected-cost minimisation over the calibrated probability, which
 requires calibration — report ECE.
 
 ## Degradation
-
 | Failure | Degrade to | Open or closed | Expected loss vs nominal |
 |---------|-----------|----------------|--------------------------|
 | T2 down | T1 with shifted threshold | fail to HOLD | +₹0 (T2 handles ≤0.5% of volume; HOLD at ₹45 vs expected T2 BLOCK saving) |
@@ -97,9 +97,6 @@ to a retry loop on the blocking path. T2 cannot downgrade a T1 BLOCK.
 SQLite for decisions/mandates/config. In-process counters. Local FS audit
 envelopes. Outbox table, not Kafka. Postgres/Redis/ObjectLock are STUB seams
 running the same contract suite.
-
-First bottleneck is the SQLite single writer, found empirically, not asserted.
-
 ## Trust boundary
 Untrusted inputs: merchant catalog text, product descriptions and reviews,
 dispute evidence documents, agent rationale strings, third-party tool outputs,
@@ -108,7 +105,6 @@ delegation tokens minted by other agents. All enter as data, never as instructio
 T2 has a closed output schema: `{verdict: enum, evidence_spans, confidence}`.
 It cannot emit an action, a threshold, a scope change, or free text that enters
 control flow.
-
 ## Audit record
 Hash-chained per tenant, `prev_envelope_hash` on each envelope, hourly signed
 Merkle root. `tools/audit_verify.py` recomputes the chain and reports the first
