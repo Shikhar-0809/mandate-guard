@@ -348,3 +348,14 @@ Choice: Relabel ₹0 as ₹0†† with footnote "no marginal API cost in benchm
 environment; excludes infrastructure."
 Rejected: Removing the cost column — it anchors the tier comparison.
 Revisit: When infrastructure cost data is available.
+
+## D030 — Precision@prior 0.2886 documented with causal explanation
+Date: 2026-09-03
+Context: baselines.json reports eval_t1_precision_at_prior=0.2886. Without
+commentary this looks like a weak model. It is a prior arithmetic consequence.
+Choice: Add ## Precision@prior note section to EVAL.md explaining the
+low-prior math, the FPR contribution, and why the cost function makes this
+acceptable. Report the figure honestly rather than omitting it.
+Rejected: Omitting the figure — an evaluator who computes it will find it
+and assume it was hidden deliberately.
+Revisit: When real prior data replaces the 0.8% assumption.

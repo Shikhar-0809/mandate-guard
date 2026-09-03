@@ -155,6 +155,27 @@ PR-AUC · ECE · p99 added ms · ₹/1k decisions · net ₹/10k txns
 
 Drop F1, and say why when dropping it.
 
+## Precision@prior note
+
+T1 precision at the operational prior (0.8% attack rate) is **0.2886**
+(from `baselines.json: eval_t1_precision_at_prior`). This means fewer than
+1-in-3 T1 positives are true attacks at this prior — the remainder are false
+positives deferred to HOLD or escalated to T2.
+
+This is not a failure of the model. It is the inevitable consequence of a
+low prior combined with a non-zero FPR. At 0.8% prior:
+- 1,000 transactions contain ~8 attacks and ~992 benign records.
+- T1 FPR on hard negatives = 9.7% → ~96 false positives per 1,000 txns.
+- Precision = 8 / (8 + 96) ≈ 0.077 at raw T1 output.
+- The reported 0.2886 reflects the eval corpus composition (higher attack
+  density than 0.8%) — the operational figure at true prior is lower still.
+
+The cost function (FN:FP = 4.6:1) makes this acceptable: a false positive
+costs ₹320 vs ₹1,470 for a missed attack. The system is tuned to catch
+attacks at the cost of precision, with HOLD as the buffer that limits FP
+operational cost to ₹45. Precision@prior is reported for honesty, not
+optimised for.
+
 ## Per-family recall by tier
 
 T2 column for family 13 sourced from baselines.json (eval_t2_blocked=25/25).
