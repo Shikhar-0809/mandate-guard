@@ -374,6 +374,7 @@ def generate_hard_negatives(
         "hn_post_snapshot_delivery",
         "hn_currency_rounding",
         "hn_narrowed_delegation",
+        "hn_post_auth_cart_mutation",
     ]
     records: list[dict[str, object]] = []
     counter = 0
@@ -556,6 +557,29 @@ def _build_hard_negative(
             raise ValueError(f"invalid narrowed delegation for record {n}")
         family_note = (
             "Hard negative: delegation correctly narrows scope to a single merchant."
+        )
+    elif archetype == "hn_post_auth_cart_mutation":
+        # Cart items swapped post-authorisation but before settlement.
+        # Amount stays identical; merchant and MCC remain in scope.
+        # The approved item is replaced with a different SKU at the same price.
+        # Hard negative because the amount and scope checks pass — only semantic
+        # comparison of the approved vs settled cart detects the mutation.
+        mutated_item = CartItem(
+            sku=f"ZZ-SKU-MUTATED-{n}",
+            name=f"Mutated Item Post Auth {n}",
+            quantity=base.cart.items[0].quantity,
+            unit_price=base.cart.items[0].unit_price,
+        )
+        cart = CartMandate(
+            mandate_id=base.cart.mandate_id,
+            items=(mutated_item,),
+            total=mutated_item.unit_price * mutated_item.quantity,
+            cart_hash=_make_cart_hash(),
+        )
+        intent = _rebuild_intent(base, cart_hash=None)
+        note = "Cart item swapped post-auth, amount unchanged"
+        family_note = (
+            "Hard negative: SKU replaced post-authorisation, amount/scope intact."
         )
 
     return _serialize_record(

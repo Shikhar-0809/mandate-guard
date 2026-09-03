@@ -306,3 +306,17 @@ ARCHITECTURE.md (FN ₹1470, FP ₹320, HOLD ₹45) at 0.8% attack prior.
 Rejected: Exact simulation — requires prod traffic data not available at BUILD
 tier. ASSUMPTION labels make the gap explicit.
 Revisit: When real traffic data is available to replace ASSUMPTION labels.
+
+## D026 — C18: post-auth cart mutation hard-negative archetype
+Date: 2026-09-03
+Context: Hard-negative corpus lacked a post-authorisation mutation archetype.
+This is a distinct attack surface: the mandate authorises cart A; the agent
+substitutes a different SKU before settlement while keeping amount and scope
+identical. T0 and T1 cannot detect this without semantic comparison.
+Choice: Add hn_post_auth_cart_mutation as a dev hard-negative archetype.
+Label ALLOW — it is a hard negative to test precision, not a labeled attack.
+Rejected: Labeling as BLOCK — we don't have ground truth that this is always
+fraudulent; the archetype tests the system's ability to surface suspicion, not
+to auto-block.
+Revisit: If real chargeback data shows this archetype is predominantly
+fraudulent, promote to a labeled attack family.

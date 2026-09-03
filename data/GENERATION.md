@@ -19,6 +19,13 @@ overwrite. Delete it manually to regenerate a frozen split.
 - **dev**: seed `42`, benign/hard-negative/attack families 1–7
 - **sealed**: seed `137`, attack families 8–13 only
 
+## Hard-negative archetypes (dev)
+
+Archetypes: stockout substitution · in-tolerance price drift · partial capture ·
+retry with fresh idempotency key · legitimate basket split · subscription step-up
+with notice · subsidiary name confusability · post-snapshot delivery fee ·
+currency rounding · correctly-narrowed sub-agent delegation · post-auth cart mutation (SKU swap post-authorisation, amount/scope intact)
+
 ## purchase_intent field
 
 Every serialized record includes `purchase_intent`, a string stating what the
@@ -30,7 +37,7 @@ mandate text).
 
 ## hn_semantic_ambiguous — genuinely ambiguous hard negatives (dev only)
 
-Six ALLOW records appended to `hard_negatives.jsonl` (206 total hard negatives).
+Six ALLOW records appended to `hard_negatives.jsonl` (226 total hard negatives).
 Each pairs a plausible `purchase_intent` with a related but not identical cart
 item. T2 should return ALLOW or HOLD — BLOCK is a false positive. Tests T2
 precision on borderline semantic matches.
