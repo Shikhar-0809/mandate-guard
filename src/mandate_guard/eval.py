@@ -342,6 +342,7 @@ def compute_metrics(
         index
         for index, record in enumerate(records)
         if str(record["family"]).startswith("hn_")
+        and str(record["label"]) == "ALLOW"
     ]
     if not hn_indices:
         fpr_hard_negatives = 0.0

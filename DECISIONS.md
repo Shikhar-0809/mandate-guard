@@ -446,3 +446,62 @@ Rejected: Using _verdict_to_eval_score for tau_star selection or PR curves —
 destroys score distribution semantics even when cascade.check() is correct.
 Revisit: Replace eval_cascade_* float rates with full three-way metric functions
 when S4/cost_model.yaml lands.
+
+## D038 — Split hn_post_auth_cart_mutation into ALLOW substitution vs BLOCK swap
+Date: 2026-09-05
+Context: family_note claimed same-category post-auth substitution but the
+generator always wrote unrelated SKUs; all 20 records were label ALLOW.
+Choice: n%4==0 → disguised unrelated swap (BLOCK, 5/20); else → genuine
+same-category replacement with token overlap (ALLOW, 15/20). populate_intent
+names original Product {n}; compute_metrics HN-FPR requires label==ALLOW.
+Rejected: Wiring populate_intent fallback only — intent would match mutated cart.
+Revisit: Promote BLOCK subset to attack_family if chargeback data confirms fraud rate.
+
+## D039 — Vocabulary-driven product names for hn_post_auth_cart_mutation
+Date: 2026-09-05
+Context: First M2 pass used index-suffixed names (Product {n} Replacement
+Unit / Mutated Item Post Auth {n}); T1 scored all ALLOW at 0.0 and all
+BLOCK at 1.0 — lexical diversity was numeric only, not semantic.
+Choice: Shared electronics/groceries product vocabularies; original product
+recomputed from (n, mcc) for purchase_intent; substitute from same category
+(ALLOW) or cross category (BLOCK, n//4 index). Helpers live in generate.py,
+imported by populate_intent.py.
+Rejected: Storing original_product in a new record field — schema change.
+Revisit: Expand vocab if ALLOW subset needs more unique cart names than 12.
+
+## D040 — Strip leading intent verbs before overlap features; S2 before M1
+Date: 2026-09-05
+Context: M2 diagnostics on BLOCK-208 showed char_trigram_overlap=0.05 from
+shared trigram `er ` between "order" (intent) and "power" (cart), not from
+product semantics. 15/20 mutation records also shared identical zero-overlap
+7-vectors — lexical-overlap ceiling separate from this bug.
+Choice: Add _INTENT_VERB_STOPWORDS; strip leading verbs on intent side only
+before jaccard_token_overlap and char_trigram_overlap. Re-sequence S2 before
+M1 — category-semantic feature required before independent semantic corpus.
+Rejected: Stripping verbs from cart text or all stopword occurrences globally.
+Revisit: S2 plan turn to pick embedding-similarity vs taxonomy feature.
+
+## D041 — Randomize populate_intent verb templates; family fingerprint bug
+Date: 2026-09-05
+Context: M2 holdout flip analysis found attack_family_1 (always "buy") and
+attack_family_4 (always "order") produced identical jaccard/trigram values per
+family; D040 verb-strip then flipped TP→FN by raising overlap uniformly. T1
+was partly learning template fingerprints, not semantic mismatch.
+Choice: Replace hardcoded per-family verbs with random.choice(["purchase",
+"buy", "order", "get"]) on all templated branches where the verb is not
+structurally part of the attack (families 1, 3, 4, 6, stockout, mutation,
+fallback). Left fixed: subsidiary "pay", family_2 "purchase from", family_5
+scope phrase, family_7 "retry purchase".
+Rejected: Reverting D040 verb-strip — fingerprint was in populate_intent, not
+features.py.
+Revisit: None. Bounded impact: families 1 and 4 are T0-blocking in cascade;
+T1 standalone metrics affected, not production cascade detection.
+
+Addendum: remaining post-fix score constancy on families 1/4 (jaccard=1.0,
+char_trigram=1.0 across all 30 records each) reflects genuine ground-truth
+content identity for these amount/hash-based attacks (T0's domain), not a
+template artifact — confirmed by contrast with pre-strip trigram variance
+once real verb diversity is present (4 distinct values). T0 catches these
+families regardless of T1's output; the t1_recall drop (1.0->0.8) reflects
+T1 correctly declining to flag content it has no semantic basis to
+distinguish, not a capability loss.

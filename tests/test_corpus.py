@@ -258,6 +258,41 @@ def test_dev_record_counts() -> None:
     assert len(load_jsonl(DATA_DEV / "attacks.jsonl")) == 270
 
 
+HN_POST_AUTH_CART_MUTATION_LABELS: dict[str, str] = {
+    f"zz-record-hn_post_auth_cart_mutation-{n}": (
+        "BLOCK" if n % 4 == 0 else "ALLOW"
+    )
+    for n in range(200, 220)
+}
+
+
+def test_hn_post_auth_cart_mutation_label_split() -> None:
+    records = load_jsonl(DATA_DEV / "hard_negatives.jsonl")
+    mutation_records = [
+        record
+        for record in records
+        if str(record["family"]) == "hn_post_auth_cart_mutation"
+    ]
+    observed = {
+        str(record["record_id"]): str(record["label"])
+        for record in mutation_records
+    }
+    assert observed == HN_POST_AUTH_CART_MUTATION_LABELS
+
+    allow_names = [
+        str(record["cart_items"][0]["name"])
+        for record in mutation_records
+        if str(record["label"]) == "ALLOW"
+    ]
+    block_names = [
+        str(record["cart_items"][0]["name"])
+        for record in mutation_records
+        if str(record["label"]) == "BLOCK"
+    ]
+    assert len(allow_names) == len(set(allow_names))
+    assert len(block_names) == len(set(block_names))
+
+
 def test_sealed_record_counts() -> None:
     assert len(load_jsonl(DATA_SEALED / "attacks.jsonl")) == 150
 

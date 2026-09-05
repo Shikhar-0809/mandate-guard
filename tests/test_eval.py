@@ -139,3 +139,14 @@ def test_precision_at_prior_property() -> None:
 
 def test_recall_on_records_empty() -> None:
     assert recall_on_records([], [], 0.5) == 0.0
+
+
+def test_compute_metrics_fpr_hard_negatives_excludes_block_labeled_hn() -> None:
+    records = [
+        _make_record("ALLOW", family="hn_price_drift"),
+        _make_record("BLOCK", family="hn_post_auth_cart_mutation"),
+        _make_record("ALLOW", family="hn_stockout_substitution"),
+    ]
+    scores = [0.9, 0.9, 0.1]
+    metrics = compute_metrics(records, scores, threshold=0.5)
+    assert metrics["fpr_hard_negatives"] == 0.5

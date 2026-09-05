@@ -18,6 +18,8 @@ STOPWORDS = {
     "want", "renew", "renewal", "subscription", "upgrade", "purchase",
 }
 
+_INTENT_VERB_STOPWORDS = frozenset({"order", "buy", "purchase", "get"})
+
 FEATURE_NAMES = [
     "jaccard_token_overlap",
     "char_trigram_overlap",
@@ -31,6 +33,14 @@ FEATURE_NAMES = [
 
 def _tokenize(text: str) -> list[str]:
     return re.findall(r"[a-zA-Z0-9]+", text.lower())
+
+
+def _intent_text_for_overlap(intent: str) -> str:
+    """Drop leading intent-verb template tokens before overlap features."""
+    tokens = _tokenize(intent)
+    while tokens and tokens[0] in _INTENT_VERB_STOPWORDS:
+        tokens.pop(0)
+    return " ".join(tokens)
 
 
 def _trigrams(text: str) -> set[str]:
@@ -75,12 +85,16 @@ def extract_features(
     )
 
     # 1. jaccard_token_overlap
-    intent_tokens = set(_tokenize(intent))
+    intent_overlap_text = _intent_text_for_overlap(intent)
+    intent_tokens = set(_tokenize(intent_overlap_text))
     cart_tokens = set(_tokenize(cart_text))
     jaccard = _jaccard(intent_tokens, cart_tokens)
 
     # 2. char_trigram_overlap
-    trigram_sim = _jaccard(_trigrams(intent), _trigrams(cart_text))
+    trigram_sim = _jaccard(
+        _trigrams(intent_overlap_text),
+        _trigrams(cart_text),
+    )
 
     # 3. tfidf_cosine_sim
     if tfidf_vectorizer is not None and intent and cart_text:

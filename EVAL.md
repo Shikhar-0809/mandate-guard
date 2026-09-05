@@ -15,7 +15,20 @@ mandate circulars, published merchant substitution policies), not imagination.
 Archetypes: stockout substitution · in-tolerance price drift · partial capture ·
 retry with fresh idempotency key · legitimate basket split · subscription step-up
 with notice · subsidiary name confusability · post-snapshot delivery fee ·
-currency rounding · correctly-narrowed sub-agent delegation.
+currency rounding · correctly-narrowed sub-agent delegation · post-auth cart
+mutation.
+
+**Post-auth cart mutation (`hn_post_auth_cart_mutation`).** No longer uniformly
+ALLOW. Fifteen of twenty records are genuine same-category substitutions
+(replacement SKU with token overlap to the authorized product; label ALLOW).
+Five of twenty are disguised unrelated swaps at matched price, merchant, and MCC
+(label BLOCK), assigned deterministically when record index `n % 4 == 0`
+(ids 200, 204, 208, 212, 216). Adjudication: same-category replacement within
+scope cap and merchant allowlist is treated as a hard negative (precision test);
+unrelated SKU swap at matched structural fields is treated as fraud evading T0
+amount/scope checks. The prior all-ALLOW version did not satisfy this rule
+because every record used unrelated naming (`Mutated Item Post Auth {n}`) while
+`family_note` claimed same-category substitution.
 
 **C — attacks.** Stratified by cause and by strategy family.
 

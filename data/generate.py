@@ -55,6 +55,91 @@ RECORD_FIELDS: tuple[str, ...] = (
 
 DEFAULT_NOW = datetime(2026, 8, 1, 12, 0, 0)  # noqa: DTZ001
 
+_ELECTRONICS_PRODUCTS = [
+    "Wireless Mouse",
+    "USB-C Hub",
+    "Bluetooth Speaker",
+    "Phone Charger",
+    "Laptop Stand",
+    "Webcam",
+    "Mechanical Keyboard",
+    "Power Bank",
+    "HDMI Cable",
+    "Wireless Earbuds",
+    "Monitor Arm",
+    "SD Card Reader",
+    "Desk Lamp",
+    "USB Flash Drive",
+    "Tablet Stylus",
+]
+_GROCERIES_PRODUCTS = [
+    "Organic Pasta",
+    "Coffee Beans",
+    "Granola Bars",
+    "Olive Oil",
+    "Almond Butter",
+    "Herbal Tea",
+    "Dried Fruit Mix",
+    "Rice Noodles",
+    "Sparkling Water",
+    "Trail Mix",
+    "Oat Milk",
+    "Honey Jar",
+    "Brown Rice",
+    "Green Tea",
+    "Peanut Butter",
+]
+_HN_POST_AUTH_COUNTER_START = 200
+_HN_POST_AUTH_COUNTER_END = 220
+
+
+def _product_vocab_for_mcc(mcc: str) -> list[str]:
+    if mcc == "groceries":
+        return _GROCERIES_PRODUCTS
+    return _ELECTRONICS_PRODUCTS
+
+
+def _other_product_vocab(mcc: str) -> list[str]:
+    if mcc == "groceries":
+        return _ELECTRONICS_PRODUCTS
+    return _GROCERIES_PRODUCTS
+
+
+def hn_post_auth_record_index(record_id: str) -> int:
+    return int(record_id.rsplit("-", 1)[-1])
+
+
+def _hn_post_auth_allow_ordinal(n: int) -> int:
+    allow_values = [
+        index
+        for index in range(_HN_POST_AUTH_COUNTER_START, _HN_POST_AUTH_COUNTER_END)
+        if index % 4 != 0
+    ]
+    return allow_values.index(n)
+
+
+def hn_post_auth_original_product(n: int, mcc: str) -> str:
+    vocab = _product_vocab_for_mcc(mcc)
+    return vocab[n % len(vocab)]
+
+
+def hn_post_auth_substitute_product(n: int, mcc: str, *, block: bool) -> str:
+    if block:
+        vocab = _other_product_vocab(mcc)
+        return vocab[(n // 4) % len(vocab)]
+    vocab = _product_vocab_for_mcc(mcc)
+    allow_ordinal = _hn_post_auth_allow_ordinal(n)
+    substitute_index = allow_ordinal % len(vocab)
+    original_index = n % len(vocab)
+    if substitute_index == original_index:
+        substitute_index = (substitute_index + 1) % len(vocab)
+    return vocab[substitute_index]
+
+
+def hn_post_auth_substitute_sku(substitute_product: str, n: int) -> str:
+    slug = substitute_product.replace(" ", "-").upper()
+    return f"ZZ-SKU-{slug}-{n}"
+
 
 def _make_cart_hash() -> str:
     while True:
@@ -402,6 +487,7 @@ def _build_hard_negative(
     note = ""
     family_note = ""
     delegation_token_id: str | None = None
+    record_label = "ALLOW"
 
     if archetype == "hn_stockout_substitution":
         item = CartItem(
@@ -560,32 +646,51 @@ def _build_hard_negative(
         )
     elif archetype == "hn_post_auth_cart_mutation":
         # Cart items swapped post-authorisation but before settlement.
-        # Amount stays identical; merchant and MCC remain in scope.
-        # The approved item is replaced with a different SKU at the same price.
-        # Hard negative because the amount and scope checks pass — only semantic
-        # comparison of the approved vs settled cart detects the mutation.
-        mutated_item = CartItem(
-            sku=f"ZZ-SKU-MUTATED-{n}",
-            name=f"Mutated Item Post Auth {n}",
+        # n % 4 == 0: cross-category swap (BLOCK). Otherwise: same-category
+        # substitute (ALLOW). Product names come from shared vocabularies.
+        block = n % 4 == 0
+        original_product = hn_post_auth_original_product(n, mcc)
+        substitute_product = hn_post_auth_substitute_product(
+            n,
+            mcc,
+            block=block,
+        )
+        replacement_item = CartItem(
+            sku=hn_post_auth_substitute_sku(substitute_product, n),
+            name=substitute_product,
             quantity=base.cart.items[0].quantity,
             unit_price=base.cart.items[0].unit_price,
         )
+        if block:
+            record_label = "BLOCK"
+            other_category = (
+                "electronics"
+                if mcc == "groceries"
+                else "groceries"
+            )
+            family_note = (
+                f"Attack: {original_product} swapped post-auth for "
+                f"cross-category {substitute_product} ({other_category}) "
+                f"at matched price/MCC."
+            )
+        else:
+            family_note = (
+                f"Hard negative: {original_product} replaced post-auth with "
+                f"same-category {substitute_product}, amount/scope intact."
+            )
         cart = CartMandate(
             mandate_id=base.cart.mandate_id,
-            items=(mutated_item,),
-            total=mutated_item.unit_price * mutated_item.quantity,
+            items=(replacement_item,),
+            total=replacement_item.unit_price * replacement_item.quantity,
             cart_hash=_make_cart_hash(),
         )
         intent = _rebuild_intent(base, cart_hash=None)
         note = "Cart item swapped post-auth, amount unchanged"
-        family_note = (
-            "Hard negative: SKU replaced post-authorisation, amount/scope intact."
-        )
 
     return _serialize_record(
         base,
         record_id=f"zz-record-{archetype}-{n}",
-        label="ALLOW",
+        label=record_label,
         family=archetype,
         intent=intent,
         cart=cart,
