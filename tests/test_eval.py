@@ -124,7 +124,7 @@ def test_find_cost_optimal_threshold_partition_exhaustive() -> None:
     scores = [0.25, 0.10, 0.75, 0.30]
     taus = [step / 100.0 for step in range(101)]
     for tau in taus:
-        fp, fn, hold_pos, hold_neg = _cost_partition_at_tau(records, scores, tau)
+        fp, fn = _cost_partition_at_tau(records, scores, tau)
         tp = sum(
             1
             for record, score in zip(records, scores)
@@ -133,61 +133,11 @@ def test_find_cost_optimal_threshold_partition_exhaustive() -> None:
         tn = sum(
             1
             for record, score in zip(records, scores)
-            if score == 0.0 and str(record["label"]) == "ALLOW"
+            if score < tau and str(record["label"]) == "ALLOW"
         )
-        assert fp + fn + hold_pos + hold_neg + tp + tn == len(records), (
-            f"tau={tau}: fp={fp} fn={fn} hold_pos={hold_pos} hold_neg={hold_neg} "
-            f"tp={tp} tn={tn}"
+        assert fp + fn + tp + tn == len(records), (
+            f"tau={tau}: fp={fp} fn={fn} tp={tp} tn={tn}"
         )
-
-
-def test_find_cost_optimal_threshold_max_hold_rate_constrains_candidate() -> None:
-    """max_hold_rate excludes high-HOLD taus; fail closed when none qualify."""
-    records = [_make_record("BLOCK", family="attack_family_1") for _ in range(10)] + [
-        _make_record("ALLOW") for _ in range(10)
-    ]
-    scores = [0.5] * 20
-
-    tau_unconstrained, _ = find_cost_optimal_threshold(
-        records, scores, fp_cost=320.0, fn_cost=320.0, hold_cost=45.0
-    )
-    assert tau_unconstrained == 1.0
-
-    max_hold_rate = 0.05
-    tau_constrained, _ = find_cost_optimal_threshold(
-        records,
-        scores,
-        fp_cost=320.0,
-        fn_cost=320.0,
-        hold_cost=45.0,
-        max_hold_rate=max_hold_rate,
-    )
-    _, _, hold_pos, hold_neg = _cost_partition_at_tau(records, scores, tau_constrained)
-    hold_rate = (hold_pos + hold_neg) / len(records)
-    assert hold_rate <= max_hold_rate
-
-    with pytest.raises(ValueError, match="No tau in \\[0,1\\] satisfies max_hold_rate"):
-        find_cost_optimal_threshold(
-            records,
-            scores,
-            fp_cost=320.0,
-            fn_cost=320.0,
-            hold_cost=45.0,
-            max_hold_rate=-0.1,
-        )
-
-
-def test_find_cost_optimal_threshold_max_hold_rate_none_unchanged() -> None:
-    records = [_make_record("BLOCK", family="attack_family_1") for _ in range(5)] + [
-        _make_record("ALLOW") for _ in range(5)
-    ]
-    scores = [0.9] * 5 + [0.1] * 5
-    tau_default, cost_default = find_cost_optimal_threshold(records, scores)
-    tau_explicit, cost_explicit = find_cost_optimal_threshold(
-        records, scores, max_hold_rate=None
-    )
-    assert tau_default == tau_explicit
-    assert cost_default == cost_explicit
 
 
 def test_find_cost_optimal_threshold_clean_separation() -> None:
@@ -201,21 +151,42 @@ def test_find_cost_optimal_threshold_clean_separation() -> None:
 
 def test_compute_metrics_and_optimizer_cost_agree() -> None:
     """Regression guard: compute_metrics and find_cost_optimal_threshold
-    must agree on cost for the same (fp, fn, hold) outcome at the same tau -
-    this is the exact bug fixed in D048 (2-term vs 3-term disagreement)."""
+    must agree on cost for the same (fp, fn) outcome at the same tau (D064)."""
     records = [_make_record("BLOCK", family="attack_family_1") for _ in range(5)] + [
         _make_record("ALLOW") for _ in range(10)
     ]
     scores = [1.0] * 4 + [0.5] + [0.3] * 5 + [0.0] * 5
     tau = 0.6
     metrics = compute_metrics(records, scores, tau)
-    hold = sum(1 for s in scores if 0.0 < s < tau)
     expected_cost_per_10k = (
-        compute_cost(int(metrics["fp_count"]), int(metrics["fn_count"]), hold)
+        compute_cost(
+            int(metrics["fp_count"]),
+            int(metrics["fn_count"]),
+            n_pos=5,
+            n_neg=10,
+            prior=0.008,
+        )
         / len(records)
     ) * 10000.0
     assert metrics["net_cost_per_10k"] == pytest.approx(expected_cost_per_10k)
-    assert metrics["hold_count"] == hold
+
+
+def test_no_hold_tier_ambiguous_scores_cost_as_fn_or_free() -> None:
+    """D064 contract: cascade.check() never produces HOLD without T2. A
+    record scoring strictly between 0 and tau is a real ALLOW in the
+    T2-disabled evaluations this project actually runs - full fn_cost if
+    it's a real attack, zero cost if legitimate. No discounted HOLD tier."""
+    records = [
+        _make_record("BLOCK", family="attack_family_1"),
+        _make_record("ALLOW"),
+    ]
+    scores = [0.5, 0.5]
+    tau = 0.9
+    fp, fn = _cost_partition_at_tau(records, scores, tau)
+    assert fp == 0
+    assert fn == 1
+    cost = compute_cost(fp, fn, fp_cost=320.0, fn_cost=1470.0)
+    assert cost == 1470.0
 
 
 def test_threshold_sweep_basic() -> None:

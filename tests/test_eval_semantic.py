@@ -160,37 +160,31 @@ def test_deviation_population_matches_original_deviation_records() -> None:
 
 
 def test_compute_cost_prior_none_matches_existing_raw_behavior() -> None:
-    raw = compute_cost(2, 3, 4)
-    explicit_none = compute_cost(2, 3, 4, prior=None)
+    """D064: two-way cost only, no hold term."""
+    raw = compute_cost(2, 3)
+    explicit_none = compute_cost(2, 3, prior=None)
     assert raw == explicit_none
-    assert raw == 2 * 320.0 + 3 * 1470.0 + 4 * 45.0
+    assert raw == 2 * 320.0 + 3 * 1470.0
 
 
 def test_compute_cost_with_prior_reweights_by_class_rate() -> None:
+    """D064: two-way cost only, no hold term."""
     n_pos = 10
     n_neg = 10
     fp = 2
     fn = 1
-    hold_pos = 2
-    hold_neg = 4
     prior = 0.1
     fn_rate = fn / n_pos
     fp_rate = fp / n_neg
-    hold_rate_pos = hold_pos / n_pos
-    hold_rate_neg = hold_neg / n_neg
     weighted_fn = prior * fn_rate
     weighted_fp = (1.0 - prior) * fp_rate
-    weighted_hold = prior * hold_rate_pos + (1.0 - prior) * hold_rate_neg
-    expected = weighted_fn * 1470.0 + weighted_fp * 320.0 + weighted_hold * 45.0
+    expected = weighted_fn * 1470.0 + weighted_fp * 320.0
 
     actual = compute_cost(
         fp,
         fn,
-        hold_pos + hold_neg,
         n_pos=n_pos,
         n_neg=n_neg,
-        hold_pos=hold_pos,
-        hold_neg=hold_neg,
         prior=prior,
     )
     assert actual == pytest.approx(expected)

@@ -97,21 +97,25 @@ fraud — not opposite corners as originally reported. The original
 "opposite-direction" framing was partly an artifact of the pre-D060
 double-counting bug.
 
-D061 added a HOLD-capacity constraint (`max_hold_rate`) so the optimizer cannot
-treat unlimited deferral as free. This eliminates that corner but still does
-not produce a usable interior threshold: the corrected optimizer only offers
-two corner-like regimes depending on the capacity assumption — block nearly all
-traffic (fp~195/200 ALLOW) at low HOLD capacity, or block most traffic while
-deferring ~20% (fp~121–136) at higher HOLD capacity. No smooth interior
-tradeoff exists between them on this corpus.
+An intermediate fix (D061) introduced a HOLD-capacity constraint
+(`max_hold_rate`) on the theory that unlimited-cost-free deferral to HOLD
+was driving the degenerate corner. Further investigation (D064) found this
+diagnosis was itself wrong: `cascade.check()` never produces a HOLD
+verdict without T2 actually being invoked, and every evaluation context
+this project uses to select a threshold (dev corpus, M1 corpus) evaluates
+T0+T1 only, with T2 disabled by default. There is no HOLD tier to price or
+cap in that configuration. D061's `max_hold_rate` mechanism has been
+removed; cost is now a plain two-way FP/FN calculation with no discount
+for ambiguous scores.
 
-This is now understood as likely a class-separation problem in T1's current
-features on the M1 corpus, not a cost-model problem per se — see D062 and S2
-(structural features, CHANGES.md). Full derivation: D058, D060, D061, D062.
-This is disclosed as a real, general limitation of single-threshold cost
-optimization at low prevalence — not a defect specific to this corpus, and
-directly relevant to anyone deploying a similar detector at a realistic fraud
-rate.
+The τ=1.00 corner is now understood as a real property of this corpus's
+class separation at low prevalence, not an artifact of how HOLD was
+priced. Whether a genuinely usable interior threshold exists depends on
+T1's features separating attacks from legitimate traffic well enough -
+tracked as S2's continued relevance. Full derivation: D058, D060, D061
+(superseded), D062 (superseded pending re-derivation), D064. This remains
+a real, disclosed limitation of single-threshold cost optimization at low
+prevalence.
 
 ## Corpus
 

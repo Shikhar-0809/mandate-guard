@@ -311,32 +311,27 @@ def score_t0_t1(record: dict[str, object], model_dir: Path) -> float:
 def compute_cost(
     fp: int,
     fn: int,
-    hold: int,
     fp_cost: float = 320.0,
     fn_cost: float = 1470.0,
-    hold_cost: float = 45.0,
     n_pos: int | None = None,
     n_neg: int | None = None,
-    hold_pos: int | None = None,
-    hold_neg: int | None = None,
     prior: float | None = None,
 ) -> float:
+    """D064: two-way cost only. No HOLD term - cascade.check() never
+    produces HOLD without T2 actually being invoked, and every current
+    caller evaluates T0+T1 with T2 disabled, where HOLD is architecturally
+    unreachable. Supersedes the 3-term (fp/fn/hold) cost model."""
     if prior is None:
-        return fp * fp_cost + fn * fn_cost + hold * hold_cost
+        return fp * fp_cost + fn * fn_cost
 
-    if n_pos is None or n_neg is None or hold_pos is None or hold_neg is None:
-        raise ValueError(
-            "n_pos, n_neg, hold_pos, and hold_neg are required when prior is set"
-        )
+    if n_pos is None or n_neg is None:
+        raise ValueError("n_pos and n_neg are required when prior is set")
 
     fn_rate = fn / n_pos if n_pos > 0 else 0.0
     fp_rate = fp / n_neg if n_neg > 0 else 0.0
-    hold_rate_pos = hold_pos / n_pos if n_pos > 0 else 0.0
-    hold_rate_neg = hold_neg / n_neg if n_neg > 0 else 0.0
     weighted_fn = prior * fn_rate
     weighted_fp = (1.0 - prior) * fp_rate
-    weighted_hold = prior * hold_rate_pos + (1.0 - prior) * hold_rate_neg
-    return weighted_fn * fn_cost + weighted_fp * fp_cost + weighted_hold * hold_cost
+    return weighted_fn * fn_cost + weighted_fp * fp_cost
 
 
 def compute_metrics(
@@ -389,8 +384,12 @@ def compute_metrics(
         pr_auc = float(average_precision_score(y_true_arr, np.array(scores)))
 
     total = len(records)
-    hold = sum(1 for s in scores if 0.0 < s < threshold)
-    cost = compute_cost(fp, fn, hold)
+    # D064: no HOLD tier for T0+T1-only evaluation. fp/fn already computed
+    # above (lines 354-358) are the correct, exhaustive two-way partition -
+    # reuse them directly rather than recomputing via a second path, and
+    # apply prior-weighting consistently (previously silently ignored here
+    # even though `prior` was accepted as a parameter - also fixed by D064).
+    cost = compute_cost(fp, fn, n_pos=sum(y_true), n_neg=len(y_true) - sum(y_true), prior=prior)
     net_cost_per_10k = (cost / total) * 10000.0 if total > 0 else 0.0
 
     return {
@@ -404,7 +403,6 @@ def compute_metrics(
         "fn_count": float(fn),
         "tp_count": float(tp),
         "tn_count": float(tn),
-        "hold_count": float(hold),
     }
 
 
@@ -412,21 +410,22 @@ def _cost_partition_at_tau(
     records: list[dict[str, object]],
     scores: list[float],
     tau: float,
-) -> tuple[int, int, int, int]:
-    fp = fn = hold_pos = hold_neg = 0
+) -> tuple[int, int]:
+    """Two-way FP/FN partition at a given tau (D064). No HOLD bucket:
+    cascade.check() only reaches HOLD via T2, and every current caller
+    evaluates T0+T1 with T2 disabled, where HOLD is unreachable. A record
+    scoring below tau is a real ALLOW - fn_cost if BLOCK-labeled (a real
+    miss), zero cost if ALLOW-labeled (a true negative)."""
+    fp = fn = 0
     for record, score in zip(records, scores):
         label = str(record["label"])
-        if score == 0.0:
+        if score >= tau:
+            if label == "ALLOW":
+                fp += 1
+        else:
             if label == "BLOCK":
                 fn += 1
-        elif score < tau:
-            if label == "BLOCK":
-                hold_pos += 1
-            else:
-                hold_neg += 1
-        elif label == "ALLOW":
-            fp += 1
-    return fp, fn, hold_pos, hold_neg
+    return fp, fn
 
 
 def find_cost_optimal_threshold(
@@ -434,46 +433,28 @@ def find_cost_optimal_threshold(
     scores: list[float],
     fp_cost: float = 320.0,
     fn_cost: float = 1470.0,
-    hold_cost: float = 45.0,
     prior: float | None = None,
-    max_hold_rate: float | None = None,
 ) -> tuple[float, float]:
+    """D064: two-way FP/FN cost only. hold_cost and max_hold_rate removed -
+    they modeled a HOLD tier that does not exist for T0+T1-only evaluation
+    (cascade.check() never produces HOLD without T2). Supersedes D061's
+    max_hold_rate mechanism entirely, not just its numeric assumption."""
     n_pos = sum(1 for record in records if str(record["label"]) == "BLOCK")
     n_neg = sum(1 for record in records if str(record["label"]) == "ALLOW")
     best_tau = 0.0
     best_cost = float("inf")
     for step in range(101):
         tau = step / 100.0
-        fp, fn, hold_pos, hold_neg = _cost_partition_at_tau(records, scores, tau)
-        hold = hold_pos + hold_neg
-        hold_rate = (hold_pos + hold_neg) / len(records) if records else 0.0
-        if max_hold_rate is not None and hold_rate > max_hold_rate:
-            continue
+        fp, fn = _cost_partition_at_tau(records, scores, tau)
         if prior is None:
-            cost = compute_cost(fp, fn, hold, fp_cost, fn_cost, hold_cost)
+            cost = compute_cost(fp, fn, fp_cost, fn_cost)
         else:
             cost = compute_cost(
-                fp,
-                fn,
-                hold,
-                fp_cost,
-                fn_cost,
-                hold_cost,
-                n_pos=n_pos,
-                n_neg=n_neg,
-                hold_pos=hold_pos,
-                hold_neg=hold_neg,
-                prior=prior,
+                fp, fn, fp_cost, fn_cost, n_pos=n_pos, n_neg=n_neg, prior=prior
             )
         if cost < best_cost or (cost == best_cost and tau > best_tau):
             best_tau = tau
             best_cost = cost
-    if max_hold_rate is not None and best_cost == float("inf"):
-        raise ValueError(
-            f"No tau in [0,1] satisfies max_hold_rate={max_hold_rate} "
-            f"on this corpus (n={len(records)}); every threshold exceeds the "
-            f"stated HOLD capacity. Raise max_hold_rate or accept lower recall."
-        )
     return best_tau, best_cost
 
 
@@ -565,7 +546,6 @@ def threshold_sweep(
                 "fpr_hard_negatives": metrics["fpr_hard_negatives"],
                 "fp_count": metrics["fp_count"],
                 "fn_count": metrics["fn_count"],
-                "hold_count": metrics["hold_count"],
                 "net_cost_per_10k": metrics["net_cost_per_10k"],
             }
         )

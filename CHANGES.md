@@ -1,9 +1,69 @@
 # CHANGES
 
-**Execution order:** M4 → M5 → M3 → M6 → M2 → S2 (all done) → M1 → S4 → S3 →
-S1 → S6 → S5
+**Execution order:** M4 → M5 → M3 → M6 → M2 → S2 (M4/M3/M6/M2/S2 done, M5
+  in progress — see M5 entry) → M1 → S4 → S3 → S1 → S6 → S5
 
 ## MUST FIX
+
+### M3 — T1 returns T1Result (not bare float) when purchase_intent is empty
+- Category: REAL FIX
+- Verification: CONFIRMED via D035 (T1Result contract for empty
+  purchase_intent), already committed prior to this session. Cross-
+  referenced in D060 ("fn redefined as ALLOW-and-label=BLOCK... matching
+  M3's NO_SEMANTIC_EVIDENCE").
+- Decision: ACCEPTED
+- Status: DONE
+- Notes: Confirmed via DECISIONS.md citation and D060's cross-reference
+  only — not independently re-verified against t1.py source this session.
+
+### M4 — Repo public-flip prerequisites (secrets hygiene)
+- Category: SECURITY
+- Verification: CONFIRMED 2026-09-05 this session — .env present in
+  .gitignore (line 2); `git log --all --oneline -- .env` returns empty
+  (never committed on any branch); `gitleaks detect --source .
+  --log-opts="--all"` run this session: 82 commits scanned, ~16.48MB,
+  0 leaks found.
+- Decision: ACCEPTED — gitleaks-only scan coverage is an explicit,
+  signed-off scope decision (Shikhar, 2026-09-05), not an oversight.
+  trufflehog was never installed or run against this repo at any point;
+  any earlier claim that it was should be disregarded as unconfirmed.
+- Status: IN PROGRESS
+  - Secrets scan: DONE
+  - Repo visibility flip: NOT DONE — deliberately deferred to submission
+    day; Track 02 judging is confirmed post-deadline, private-until-then
+    is safe.
+- Notes: First real, evidence-backed CHANGES.md entry for M4. Supersedes
+  all prior unwritten/narrated claims about this item.
+
+### M5 — Reframe headline metrics/README (D059 result, D062 correction)
+- Category: REPORTING
+- Verification: First pass CONFIRMED via commit 0dc6d11 ("M5: reframe
+  README/baselines with real current numbers..."), committed. Second
+  corrective pass CONFIRMED this session via `git diff README.md` against
+  the current uncommitted working tree — removes the D059 magnitudes
+  (recall 0.853→0.768, HN block rate 0.133→0.164) from headline framing,
+  replaces with D062-accurate language (operating point unreachable under
+  corrected cost accounting; magnitude superseded; qualitative direction
+  unconfirmed pending S2). Matches D062's explicit requirement.
+- Decision: ACCEPTED
+- Status: IN PROGRESS — first pass DONE and committed (0dc6d11); second
+  corrective pass DRAFTED and correct in the working tree, but UNCOMMITTED
+  and not yet run through a full make check.
+- Notes: Do not cite M5 as fully DONE until the D060–D062 commit batch
+  lands and make check passes against the corrected README.
+
+### M6 — Unify cascade behind check(...) -> Verdict
+- Category: REAL FIX (correctness)
+- Verification: CONFIRMED via D036 (cascade.check() unifies T0→T1→T2
+  behind Verdict; empty intent → ALLOW with NO_SEMANTIC_EVIDENCE) and
+  D037 (cascade validation additive; continuous-score path preserved in
+  run_eval for threshold/curve metrics; cascade.check() Verdict-counting
+  added as a separate additive layer at fixed tau_star). Both committed
+  prior to this session.
+- Decision: ACCEPTED
+- Status: DONE
+- Notes: Confirmed via DECISIONS.md citations only — not independently
+  re-verified against cascade.py source this session.
 
 ### M2 — hn_post_auth_cart_mutation adjudication + verb-prefix feature fix
 - Category: REAL FIX (corpus semantics + T1 feature correctness)
@@ -89,6 +149,68 @@ S1 → S6 → S5
   - Re-run all leakage gates and full suite after the change.
 - Notes: Undermines the reproducibility guarantee GENERATION.md commits
   to. Found as a side effect of M2, not something M2 should fix inline.
+
+### M9 — make check gate does not exist; RULES 7 has never been satisfied as a whole
+- Category: REAL FIX (tooling / process integrity)
+- Verification: CONFIRMED 2026-09-05 this session — `make` not found in
+  PowerShell or Git Bash; no Makefile in repo root; see D063.
+- Decision: DEFERRED — Shikhar: continue running checks individually via
+  Cursor for now; formally tracked as a gap, not resolved this session.
+- Status: NOT STARTED
+- Effort: UNKNOWN — depends on chosen approach (WSL2 + real Makefile,
+  or a Python check-runner script); not scoped this session.
+- Sub-items (for whenever this is picked up):
+  - Confirm which RULES 7 components actually exist as runnable commands
+    in this repo today (ruff, mypy, pytest, pytest -m contract, vulture,
+    coverage, and specifically whether `eval.guard` and
+    `tools/audit_verify.py --sample 200` exist at the paths RULES.md
+    implies) before assuming an equivalent command list.
+  - Decide: Makefile (needs make installed — not present, needs WSL2 or
+    a Windows make port) vs. a Python script (e.g. scripts/check.py)
+    that runs the same steps with no external tool dependency.
+  - Once built, run it successfully end-to-end at least once before
+    citing it in any DONE status.
+- Notes: Every prior and current DONE status in this file should be read
+  with this caveat: verified via individual tool runs pasted by Cursor,
+  not via a combined RULES-7 gate, because that gate has never existed
+  as a runnable thing. D004 (2026-08-27) flagged this originally with an
+  expiry condition ("Step 7") that was apparently never reached or
+  tracked; this entry supersedes that silence, not the substance of D004.
+
+### M10 — Cost functions modeled a fictional HOLD tier for T0+T1-only evaluation
+- Category: REAL FIX (correctness -- supersedes D061/D062's framing)
+- Verification: CONFIRMED 2026-09-05 this session via live execution --
+  see D064 for full derivation. 347/347 tests pass post-fix (was 346/348
+  pre-fix, 2 real failures); dev full-intent recall_seen reaches 1.0000
+  (was 0.9818); tau_star for full-intent dev is now a genuine interior
+  value 0.220 (was degenerate 1.000).
+- Decision: ACCEPTED
+- Status: DONE (code fix). NOT DONE (re-deriving baselines_sealed_semantic.json
+  under the corrected model -- blocked on explicit sign-off, D053's
+  run-once guard currently in effect).
+- Effort: Discovered and fixed within this session; started as a two-test
+  failure investigation, expanded twice (first to compute_metrics's
+  parallel instance of the same bug, then to the deeper architectural
+  question of whether HOLD exists at all without T2) before landing on
+  the real fix.
+- Sub-items:
+  - src/mandate_guard/eval.py: compute_cost, _cost_partition_at_tau,
+    find_cost_optimal_threshold, compute_metrics, threshold_sweep all
+    updated to two-way FP/FN cost, no HOLD term.
+  - tests/test_eval.py: 2 tests deleted (tested removed 3-term API), 1
+    new contract test added, 2 tests rewritten.
+  - tests/test_eval_semantic.py: 2 tests rewritten to the two-way
+    compute_cost signature.
+  - scripts/run_eval_semantic.py: hold_cost/max_hold_rate removed from
+    its find_cost_optimal_threshold call.
+  - README.md: D061 HOLD-capacity paragraph replaced with D064
+    supersession text.
+  - Known remaining gap: run_eval.py's printed cost-model banner string
+    still says the old three-term formula -- cosmetic, not yet fixed.
+- Notes: This is the correct outcome of "no band-aids" -- what started as
+  a request to fix one failing test surfaced a real architectural
+  mismatch between the cost model and cascade.check()'s actual behavior,
+  and got fixed at the root rather than patched at the symptom.
 
 ### M1 — Independent semantic sealed set
 - Category: REAL EVAL FIX

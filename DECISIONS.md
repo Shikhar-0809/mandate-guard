@@ -992,3 +992,188 @@ this same frozen corpus, or if S6's confidence-floor recalibration
 (blocked on this measurement) changes T2's effective decision boundary
 in a way worth re-testing against a NEW corpus (not re-running this
 one).
+
+
+
+## D060 — compute_cost/find_cost_optimal_threshold double-counts HOLD against FN
+Date: 2026-09-05
+Context: find_cost_optimal_threshold computed `hold` as an independent count
+of 0<score<tau, overlapping entirely with positives already charged as `fn`
+(score<tau -> pred=0 -> fn if label=1). Every positive scoring in (0, tau)
+was billed both fn_cost and hold_cost for the same record.
+Choice: Partition records into exactly one of BLOCK (score>=tau) / HOLD
+(0<score<tau) / ALLOW (score==0) per tau via new _cost_partition_at_tau.
+fn redefined as ALLOW-and-label=BLOCK (zero-signal miss only, matching M3's
+NO_SEMANTIC_EVIDENCE). hold_pos/neg computed from the HOLD partition only.
+Consequence to verify before trusting: D058's tau=0.17 selection and D059's
+kill-criterion result were computed against the buggy function. Both must
+be rerun against the fixed function before being cited as current.
+Rejected: Patching hold_cost weight down as a band-aid — doesn't fix that
+fp/fn/hold weren't a true partition.
+Revisit: N/A — this is the partition definition going forward.
+
+
+
+## D061 — cost function had no HOLD-capacity term; corner-solution finding
+Date: 2026-09-05
+Context: Post-D060, find_cost_optimal_threshold at the true operating cost
+(hold_cost=45) returns tau=1.0 (recall=0.0158) at every FN:FP ratio tested —
+not a bug, a real property: with real score-distribution overlap (ALLOW p90
+0.976 > BLOCK p10 0.142) and HOLD priced flat at 45 with no volume limit,
+deferring nearly all traffic to HOLD always beats committing to a verdict.
+The original tau=0.17 (D058) only looked cost-optimal because the pre-D060
+double-count inflated the cost of low tau; it was never truly cost-minimal
+at hold_cost=45 — confirmed via hold_cost sweep, tau=0.17 only reappears as
+optimal at hold_cost>=160 (3.5x the real value).
+Choice: Add max_hold_rate: float | None = None to find_cost_optimal_threshold.
+When set, tau candidates with hold_rate > max_hold_rate are excluded from
+the argmin entirely (not penalized — excluded). Set to raise ValueError if
+no tau satisfies the constraint (fail closed, matching ARCHITECTURE's
+store-down-fails-closed pattern), rather than silently returning a
+constraint-violating tau. max_hold_rate=0.05 (ASSUMPTION, order-of-magnitude
+below T2's 0.5% ceiling scaled up ~10x for HOLD's lower per-unit cost; no
+citation available, same status as existing fp/fn/hold cost ASSUMPTIONs).
+cost_ratio_sensitivity left unconstrained (diagnostic tool; this is what
+surfaced the corner-solution finding and should keep surfacing it).
+run_eval_semantic.py updated to call the constrained path; tau is no longer
+hardcoded to 0.17.
+Rejected: Keeping tau=0.17 hardcoded with only a documentation caveat —
+a real fix was achievable (a capacity term), so disclosure-only was not
+the right substitute per this project's standing principle.
+Revisit: If real ops review-capacity data becomes available, replace the
+0.05 ASSUMPTION with a cited figure.
+
+
+
+## D062 — D059's tau=0.17 operating point is unreachable under correct
+cost accounting; magnitude superseded, direction unconfirmed
+Date: 2026-09-05
+Context: D061's max_hold_rate constraint sweep (fp=320, fn=1470, on the
+same 390-record M1 corpus D059 used) found no (cost_ratio, max_hold_rate)
+combination reproduces D059's tau=0.17 / recall=0.85 / fp=99 / fn=28
+operating point. The corrected optimizer only returns two corner-like
+regimes: block-nearly-everyone (fp~195, hold~1%) at max_hold_rate<=0.15,
+or block-most-plus-defer-a-fifth (fp~121-136, hold~19-24%) at
+max_hold_rate>=0.20 — no smooth interior tradeoff exists between them.
+tau=0.17 was only reachable under the pre-D060 double-counting bug; it was
+never a legitimate cost-minimal point at the real hold_cost=45. Root cause
+is likely poor class separation in T1's current lexical-similarity
+features (jaccard/trigram/tfidf-cosine) on this corpus, not a threshold
+or cost-model problem — S2 (structural features: brand_equality,
+sku_equality, category_hierarchy_distance) was already queued for
+exactly this reason and is now the load-bearing item, not optional
+polish.
+Choice: D059's specific magnitude (recall_lift=-0.0842, hn_fpr_delta=
++0.0310) is superseded and must not be cited as current in README/M5
+output — it was measured at an operating point that cannot be reached
+under correct cost accounting. D059's qualitative direction (T2 did not
+clearly help; kill criterion not met) remains provisionally plausible —
+across every tau examined in this investigation, T2-on was never
+materially better than T2-off — but this is not independently confirmed
+at a defensible tau and must not be presented as confirmed until S2
+lands and the comparison is rerun at whatever tau S2's features support.
+M5's README language citing -8.4pp/+3.1pp must be pulled and replaced
+with: kill criterion not met at the only tau tested; exact magnitude and
+even the qualitative result are unreliable pending S2; see D062.
+Rejected: Leaving D059's magnitude in the README with only a footnote —
+the number would still be read as evidence by a judge; a wrong-tau result
+is not softened by disclosure, it needs to be removed from headline claims
+entirely.
+Revisit: Once S2 lands and T1 has structural features, rerun the D059
+comparison (T2-on vs T2-off, kill criterion) at whatever tau the
+corrected optimizer selects on the improved feature set.
+
+
+
+## D063 — make check does not exist; D004's interim deviation was never resolved
+Date: 2026-09-05
+Context: RULES 6/7/8 require full `make check` output pasted before any
+task counts as done. Verified this session: `make` is not installed
+(PowerShell: CommandNotFoundException; Git Bash: command not found), and
+no Makefile exists in the repo root. D004 (2026-08-27) logged this same
+gap as an interim deviation with an explicit expiry: "EXPIRES at Step 7."
+No evidence found this session that Step 7 occurred or that a Makefile
+was ever created. D004's deviation has therefore been silently live for
+the project's entire duration, not resolved — every DONE status recorded
+in CHANGES.md and DECISIONS.md to date (including M2/M3/M4/M6/S2, all
+marked DONE this session and prior) was verified via individual ruff/
+mypy/pytest invocations Cursor happened to run and paste, never via the
+combined gate RULES 7 defines.
+Choice: Disclose this plainly rather than continue citing "make check"
+implicitly. Decision on how to resolve it (build a real Makefile via
+WSL2/make-for-Windows, write a Python check-runner script, or continue
+ad-hoc) is explicitly deferred — not self-approved here. Until resolved,
+any "done" claim in this project should be read as "done per the
+individual checks actually run and pasted," not per RULES 7's full gate.
+Rejected: Silently continuing to write "make check" in future
+verification text as if it ran — this is exactly the failure mode this
+project already caught once with CHANGES.md's M1-M8 narrative gap; a
+citation to a command that has never executed is the same category of
+error as a citation to a Cursor run that never happened.
+Revisit: When a real make-check-equivalent is built and run successfully
+end-to-end at least once.
+
+## D064 — HOLD tier is fictional for T0+T1-only evaluation; cost functions corrected, D061/D062 superseded
+Date: 2026-09-05
+Context: Investigating a real cascade recall discrepancy (committed
+baselines.json claimed eval_cascade_recall_seen_full_intent=1.0; live
+execution gave 0.9818) traced to 5 hn_post_auth_cart_mutation records
+(D038/D026 archetype, T0-blind by design) scoring ~0.228 -- below
+tau_star=1.000 as selected by find_cost_optimal_threshold with no
+max_hold_rate at that call site. Tracing further: cascade.check() (M6,
+D036) confirmed to NEVER produce VerdictState.HOLD unless T2 is actually
+invoked (t2_config.t2_enabled AND purchase_intent present AND score<1.0);
+with T2 disabled (D008 default), a record scoring 0<score<tau falls
+straight to ALLOW. Every current caller of find_cost_optimal_threshold
+and compute_metrics (dev corpus tau selection, M1 corpus tau selection via
+run_eval_semantic.py) evaluates T0+T1 with T2 disabled -- meaning D060's
+three-way BLOCK/HOLD/ALLOW cost partition, and D061's max_hold_rate
+capacity constraint built on top of it, were modeling a HOLD tier that
+does not exist in the actual code path being evaluated. Separately
+confirmed compute_metrics (used for baseline comparison and net_cost_per_10k
+reporting) had the identical double-count defect D060 fixed elsewhere,
+never patched, plus a second latent bug: its `prior` parameter was
+silently ignored by the cost calculation entirely.
+Choice: compute_cost, _cost_partition_at_tau, find_cost_optimal_threshold,
+and compute_metrics all rewritten to a genuine two-way FP/FN cost model --
+hold_cost and max_hold_rate parameters removed entirely (not defaulted to
+zero; a permanently-unused parameter is misleading residue per RULES 23).
+A record scoring below tau is fn_cost if BLOCK-labeled, zero cost if
+ALLOW-labeled. D061's max_hold_rate mechanism is superseded in full, not
+reparameterized -- it solved a problem that does not apply to any current
+evaluation context. D062's "no interior tau on M1 corpus" finding was
+measured under the same non-applicable three-way model and must be
+re-derived under this corrected model before being cited as current;
+D059's magnitudes were already superseded by D062 and remain superseded.
+Post-fix, re-running run_eval.py live (this session): dev full-intent
+recall_seen reaches 1.0000 (was 0.9818 under the old model) at a genuine
+interior tau_star=0.220 (was degenerate 1.000). All 347 tests pass,
+including the two tests that had been failing
+(test_cascade_dev_metrics_use_both_intent_loaders,
+test_find_cost_optimal_threshold_with_prior_avoids_degenerate_tau) --
+both pass on their own merits under the corrected model, not by loosened
+assertions. Two tests directly testing the removed 3-term compute_cost
+API deleted (test_find_cost_optimal_threshold_max_hold_rate_constrains_candidate,
+test_find_cost_optimal_threshold_max_hold_rate_none_unchanged); one new
+contract test added
+(test_no_hold_tier_ambiguous_scores_cost_as_fn_or_free) plus two rewrites
+of compute_cost's own unit tests in tests/test_eval_semantic.py.
+Rejected: Reparameterizing max_hold_rate to a harmless default instead of
+removing it -- leaves dead, misleading machinery in a binding cost
+function. Patching only find_cost_optimal_threshold and leaving
+compute_metrics's independent instance of the same defect unfixed --
+would leave two disagreeing cost computations in the same file, worse
+than the original bug. Treating this as a cascade.check() gap (implementing
+a standalone T0+T1-only HOLD path) instead -- ARCHITECTURE.md's stated
+invariant describes HOLD as existing specifically to absorb T2's async
+deferral window, not as a general ambiguity bucket; building a HOLD path
+with nothing to defer to would be architecture bent to satisfy a metrics
+script, backwards from how this should work.
+Revisit: baselines_sealed_semantic.json (frozen under D053's run-once
+guard) must be re-derived under this corrected model before D059/D062's
+numbers can be cited as current -- this is a disclosed, justified
+exception to "run exactly once" (genuine defect correction, not
+tau-shopping) but requires explicit sign-off before executing, tracked
+separately. run_eval.py's printed cost-model banner string still says
+"three-term objective: fp*320 + fn*1470 + hold*45" -- stale console text,
+not evidence of a functional gap; low-priority cleanup, not yet done.

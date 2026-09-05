@@ -205,6 +205,7 @@ def _format_metrics_row(name: str, metrics: dict[str, float]) -> str:
 
 
 def main() -> None:
+    sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description="Run mandate-guard evaluation")
     parser.add_argument("--model-dir", type=Path, default=Path("models/"))
     parser.add_argument("--prior", type=float, default=0.008)

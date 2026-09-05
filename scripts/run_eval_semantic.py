@@ -142,21 +142,21 @@ def run_semantic_eval(model_dir: Path, project_root: Path) -> dict[str, object]:
     )
     normalized = normalize_semantic_labels_for_training(raw_records)
 
-    print("Deriving tau_star via find_cost_optimal_threshold (D061)...")
+    print("Deriving tau_star via find_cost_optimal_threshold (D064)...")
     corpus_scores = [score_t0_t1(record, model_dir) for record in normalized]
     # D058/D059 operating point: FN:FP=1.0 (fn_cost=fp_cost=320), not 4.6:1.
-    # max_hold_rate=0.05 per D061 / config/cost_model.yaml (literal; YAML not imported).
+    # D064: no HOLD tier applies - T2 is not invoked during tau selection,
+    # and cascade.check() never produces HOLD without T2. Two-way FP/FN
+    # cost only. Supersedes D061's max_hold_rate mechanism entirely.
     tau_star, _cost_at_tau_star = find_cost_optimal_threshold(
         normalized,
         corpus_scores,
         fp_cost=320.0,
         fn_cost=320.0,
-        hold_cost=45.0,
-        max_hold_rate=0.05,
     )
     print(
         f"  tau_star={tau_star:.3f} (derived, not hardcoded; "
-        f"max_hold_rate=0.05, FN:FP=1.0)"
+        f"two-way FP/FN cost, FN:FP=1.0; see D064)"
     )
 
     deviation_records = [
