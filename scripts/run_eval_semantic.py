@@ -19,9 +19,7 @@ from contracts.verdict import VerdictState
 from mandate_guard.eval import (
     _verify_sha256,
     cascade_verdict_rate,
-    find_cost_optimal_threshold,
     load_sealed_semantic,
-    score_t0_t1,
 )
 from mandate_guard.normalize import normalize_semantic_labels_for_training
 
@@ -142,8 +140,13 @@ def run_semantic_eval(model_dir: Path, project_root: Path) -> dict[str, object]:
     )
     normalized = normalize_semantic_labels_for_training(raw_records)
 
-    t1_scores = [score_t0_t1(record, model_dir) for record in normalized]
-    tau_star, _cost_at_tau_star = find_cost_optimal_threshold(normalized, t1_scores)
+    # Per D058: find_cost_optimal_threshold degenerates at both raw
+    # counts (tau=0.01) and true prior (tau=1.0) on this corpus - no
+    # interior minimum exists at prior=0.008. Tau fixed via the
+    # FN:FP=1.0 sweep point instead (recall=0.85, 99 FP, 28 FN) -
+    # see D058 for full derivation.
+    TAU_STAR_FIXED = 0.17
+    tau_star = TAU_STAR_FIXED
 
     deviation_records = [
         record for record in normalized if str(record["label"]) == "BLOCK"

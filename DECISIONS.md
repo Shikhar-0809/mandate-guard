@@ -906,3 +906,44 @@ Revisit: If a future corpus needs cascade-level FPR as a named,
 first-class metric outside this one-off measurement - promote
 run_cascade_on_record + cascade_verdict_rate's pattern to a documented
 public API rather than re-deriving it per-corpus.
+
+## D058 — Cost-optimal threshold degenerates at both raw counts and true prior; tau fixed via FN:FP=1.0 sweep point instead
+Date: 2026-09-05
+Approved by: Shikhar (explicit sign-off, not self-approved).
+Context: D053 specified tau derived via find_cost_optimal_threshold run
+once on the M1 corpus. Running it raw (no prior) produced tau=0.01 -
+recall=1.0 but 195/200 (97.5%) of ALLOW records blocked, a degenerate
+corner where minimal T1 signal triggers BLOCK. Adding prior-reweighting
+(prior=0.008, matching EVAL.md's stated attack rate) to correct for this
+corpus's near-50/50 class balance produced the opposite degenerate
+corner: tau=1.0, recall=0.016, 0 FP but 187/190 fraud missed. Full
+51-point sweep at prior=0.008 confirmed cost is monotonically
+non-increasing across the entire [0,1] range - no interior minimum
+exists at the true prior for this cost ratio (FN:FP=4.6:1) on this
+corpus's error curve. This is not a code defect: at 0.8% true prior,
+false-positive cost on the 99.2% legitimate population structurally
+dominates fraud-miss cost at every threshold, regardless of the 4.6:1
+per-incident cost asymmetry. Same finding-class as D025 (precision@prior)
+and D051 (tau_star_full_intent unfavorable once HOLD counted) - a real,
+disclosed limitation of pure cost-threshold optimization at realistic
+priors, not a corpus or implementation bug.
+Choice: Fix tau at 0.17 - the operating point from the FN:FP=1.0 sweep
+(cost_ratio_sensitivity), the highest-ratio point that still yields a
+genuine interior cost minimum (recall=0.85, 99 FP, 28 FN) rather than a
+corner solution. This treats FN and FP as equally weighted for
+threshold-selection purposes only; the true 4.6:1 cost asymmetry is
+reported separately in results, not hidden. Kill-criterion recall/FPR
+measurement (D057) runs at this fixed tau, not via
+find_cost_optimal_threshold at any prior.
+Rejected: (a) Raw-count tau=0.01 - degenerate, not a real operating
+point. (b) True-prior tau=1.0 - equally degenerate, opposite direction.
+(c) Re-deriving dev/sealed's existing accepted tau values under
+prior-correction - out of scope for this session; those baselines are
+accepted and unchanged; this finding may motivate revisiting them later
+as its own tracked item, not silently now.
+Revisit: If cost constants (Rs320/Rs1470/Rs45, all ASSUMPTION-labeled
+per config/cost_model.yaml's absence - S4) are replaced with cited real
+figures, or if a HOLD-band threshold design (routing ambiguous scores to
+HOLD rather than a binary BLOCK/ALLOW cut) is built, re-run this
+analysis - a band may resolve what a single threshold structurally
+cannot.
