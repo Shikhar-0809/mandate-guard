@@ -1177,3 +1177,66 @@ tau-shopping) but requires explicit sign-off before executing, tracked
 separately. run_eval.py's printed cost-model banner string still says
 "three-term objective: fp*320 + fn*1470 + hold*45" -- stale console text,
 not evidence of a functional gap; low-priority cleanup, not yet done.
+
+## D065 — Pre-registered exception to D053's run-once guard: re-deriving baselines_sealed_semantic.json under D064's corrected model
+Date: 2026-09-05
+Context: D064 found the three-way BLOCK/HOLD/ALLOW cost model
+baselines_sealed_semantic.json (D059) was computed under is fictional for
+T0+T1-only evaluation -- HOLD is unreachable without T2, and every current
+call site evaluates with T2 disabled. D059's numbers were already
+superseded once by D062 (tau=0.17 unreachable under D060's fix) without
+ever being re-run; D064 supersedes them a second time. The frozen file
+has never actually reflected a valid cost model.
+Choice: Treat this as a genuine defect correction, not tau-shopping,
+per the same distinction D059 itself drew when rejecting post-hoc tau
+adjustment. Delete the current baselines_sealed_semantic.json and
+re-run scripts/run_eval_semantic.py exactly once under D064's corrected
+two-way model. Whatever result this produces -- including a result
+showing T2 performs worse, unchanged, or even passing its kill criterion
+-- is reported as-is in a follow-up entry (D066) with no further
+adjustment, no second re-run, and no cherry-picking. This is the second
+and final measurement against the frozen M1 corpus; if a future defect
+is found in the cost model again, that is a new, separately-justified
+exception requiring its own pre-registration, not a standing license to
+re-run.
+Rejected: Leaving D059's numbers frozen and disclosing them as
+resting on a superseded model without re-running -- an unreliable
+number in a submission's evaluation artifact is worse than a corrected
+one, and D053's guard exists to prevent result-shopping, not to protect
+a number that was never valid under any correct cost model.
+Revisit: N/A -- this exception is scoped to this one re-run.
+
+## D066 — Re-derivation result: T2 kill criterion still fails at the real cost-optimal tau
+Date: 2026-09-05
+Context: Per D065's pre-registered exception, baselines_sealed_semantic.json
+was deleted and scripts/run_eval_semantic.py re-run once under D064's
+corrected two-way cost model. Result: tau_star=0.170 (fp=99, fn=28,
+cost=40640.0 at fp_cost=fn_cost=320.0), recall_t2_off=0.8526,
+recall_t2_on=0.7684 (recall_lift=-0.0842), hn_block_rate_t2_off=0.1327,
+hn_block_rate_t2_on=0.1637 (hn_fpr_delta=+0.0310), kill_criterion_met=False.
+Every number is byte-identical to the frozen D059 file. Verified this is
+not stale/uncomputed: a direct fp/fn/cost sweep across neighboring tau
+values (0.10-0.30) confirms 0.170 is a genuine, isolated cost minimum
+under the real two-way formula on this corpus (tied with 0.160 at
+fp=99/fn=28/cost=40640.0; the optimizer's documented tie-break rule
+prefers the higher tau). D062's claim that tau=0.17 was "unreachable"
+applied specifically to the three-way model's max_hold_rate-constrained
+search space; with that constraint correctly removed per D064, 0.17
+reappears as exactly where this corpus's class separation places the
+minimum. Coincidental value, not coincidental mechanism.
+Choice: This is the second and final measurement against the frozen M1
+corpus per D065's pre-registration. Report plainly: T2 fails its
+pre-registered kill criterion at the real, verified cost-optimal
+threshold -- not an artifact of a broken cost model, as D062 had left
+open as a possibility. This is a stronger, cleaner negative result than
+before: the failure is now confirmed to hold at a defensible operating
+point, not merely at an operating point that happened to be reachable
+under a flawed constraint. t2_enabled remains False by default (D008,
+unchanged, now confirmed twice over on real measurements).
+Rejected: Treating the numeric identity to D059's frozen values as
+suspicious without verification -- checked directly via a fresh
+sweep before accepting; the tie-break mechanism and corpus class
+separation fully explain it.
+Revisit: If S2's structural T1 features materially change class
+separation on this corpus, a new tau-optimal point may emerge and the
+comparison would need pre-registering fresh, not reusing this result.

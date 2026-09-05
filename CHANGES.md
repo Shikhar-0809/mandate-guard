@@ -185,9 +185,10 @@
   (was 0.9818); tau_star for full-intent dev is now a genuine interior
   value 0.220 (was degenerate 1.000).
 - Decision: ACCEPTED
-- Status: DONE (code fix). NOT DONE (re-deriving baselines_sealed_semantic.json
-  under the corrected model -- blocked on explicit sign-off, D053's
-  run-once guard currently in effect).
+- Status: DONE. Re-derivation completed 2026-09-05 per D065/D066 --
+  baselines_sealed_semantic.json re-run once under the corrected model;
+  result numerically identical to the superseded D059 file (verified
+  genuine, not stale -- see D066), T2 kill criterion still not met.
 - Effort: Discovered and fixed within this session; started as a two-test
   failure investigation, expanded twice (first to compute_metrics's
   parallel instance of the same bug, then to the deeper architectural
