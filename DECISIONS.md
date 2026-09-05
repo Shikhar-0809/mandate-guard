@@ -820,3 +820,32 @@ either collapse WITHIN to near-nothing or ALLOW to near-everything.
 Revisit: If M1 generation produces an UNCERTAIN rate that's unworkable
 per D053's own revisit trigger, reconsider the 0.10/0.20 boundary widths
 first before touching the branch structure.
+
+## D055 — M1 semantic corpus: per-category composition and price bands
+Date: 2026-09-05
+Approved by: Shikhar (delegated - "yes", proceeding with batch generator
+design - 2026-09-05), designed by Claude.
+Context: D053 requires >=5/category UNCERTAIN records and genuine
+per-record diversity (not archetype cycling, per family 13's disclosed
+flaw). Needed a concrete per-category sampling composition and a source
+for base_unit_price_minor_units (build_semantic_record's price parameter
+had no per-leaf table yet).
+Choice:
+- Fixed composition per category (50 records): 12 same-leaf ALLOW, 3
+  same-leaf UNCERTAIN, 3 same-leaf DEVIATION, 8 sibling+rationale ALLOW,
+  2 sibling+rationale UNCERTAIN, 6 sibling-no-rationale DEVIATION, 6
+  same-top-different-parent UNCERTAIN, 10 cross-top-level DEVIATION.
+  Totals: 200 ALLOW / 190 DEVIATION / 110 UNCERTAIN (22% UNCERTAIN,
+  spread across three independent sources: same-leaf boundary, sibling-
+  with-contradicting-rationale, and same-top-different-parent).
+- LEAF_BASE_PRICE: one reference price per leaf, sampled once from a
+  per-top-level-category INR band (ASSUMPTION-labeled, not cited to any
+  real pricing data), fixed across all records referencing that leaf so
+  amount_ratio has a stable reference point per product.
+Rejected: Resampling a fresh reference price per record instead of per
+leaf -- would make amount_ratio meaningless (deviation from a number
+that itself changes every time).
+Revisit: If real generation shows 22% UNCERTAIN is unworkable per D053's
+own revisit trigger, or if the sibling/singleton exclusion produces
+skewed per-category composition, reconsider the fixed counts above
+before touching the adjudication branch structure itself.

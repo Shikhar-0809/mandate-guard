@@ -15,6 +15,9 @@ from pathlib import Path
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
+_SRC = _PROJECT_ROOT / "src"
+if str(_SRC) not in sys.path:
+    sys.path.insert(0, str(_SRC))
 
 from contracts import (
     CartItem,
@@ -1122,6 +1125,228 @@ def validate_generator_across_seeds(
     return summaries
 
 
+_SEMANTIC_PRICE_BANDS_MINOR: dict[str, tuple[int, int]] = {
+    "Electronics": (50_000, 500_000),
+    "Groceries": (5_000, 60_000),
+    "Home Goods": (20_000, 300_000),
+    "Apparel": (30_000, 300_000),
+    "Health & Personal Care": (10_000, 150_000),
+    "Office Supplies": (5_000, 200_000),
+    "Toys & Games": (20_000, 250_000),
+    "Pet Supplies": (15_000, 200_000),
+    "Automotive": (30_000, 500_000),
+    "Books & Media": (15_000, 150_000),
+}
+
+_SINGLETON_PARENT_INTENT_LEAVES: frozenset[str] = frozenset(
+    {
+        "Electronics > Cables > HDMI Cable",
+        "Electronics > Office > Desk Lamp",
+        "Apparel > Sleepwear > Pajama Set",
+        "Toys & Games > Action Figures > Action Figure Set",
+        "Toys & Games > Plush > Stuffed Animal",
+        "Books & Media > Magazines > Monthly Magazine Subscription",
+        "Books & Media > Stationery Media > Journal Notebook",
+        "Books & Media > Educational > Textbook",
+    }
+)
+
+_CATEGORY_COMPOSITION: tuple[
+    tuple[str, str | None, bool | None, int],
+    ...,
+] = (
+    ("same_leaf", "WITHIN", False, 12),
+    ("same_leaf", "BOUNDARY", False, 3),
+    ("same_leaf", "OUTSIDE", False, 3),
+    ("sibling", "WITHIN", True, 8),
+    ("sibling", "BOUNDARY", True, 1),
+    ("sibling", "OUTSIDE", True, 1),
+    ("sibling", None, False, 6),
+    ("diff_parent", None, None, 6),
+    ("cross_top", None, None, 10),
+)
+
+
+def _build_leaf_base_price_table() -> dict[str, int]:
+    from mandate_guard.taxonomy import TAXONOMY_LEAVES
+
+    price_rng = random.Random(271000)
+    table: dict[str, int] = {}
+    for leaf in TAXONOMY_LEAVES:
+        top_level = leaf.split(" > ", 1)[0]
+        lo, hi = _SEMANTIC_PRICE_BANDS_MINOR[top_level]
+        table[leaf] = price_rng.randint(lo, hi)
+    return table
+
+
+def _build_tolerance_pair_pools() -> dict[str, list[tuple[float, float]]]:
+    from mandate_guard.semantic_adjudication import combined_tolerance_state
+
+    pools: dict[str, list[tuple[float, float]]] = {
+        "WITHIN": [],
+        "BOUNDARY": [],
+        "OUTSIDE": [],
+    }
+    ratio_grid = [0.70, 0.80, 0.85, 0.90, 0.95, 1.0, 1.05, 1.10, 1.15, 1.20, 1.25, 1.30]
+    for amount_ratio in ratio_grid:
+        for quantity_ratio in ratio_grid:
+            state = combined_tolerance_state(amount_ratio, quantity_ratio)
+            pools[state].append((amount_ratio, quantity_ratio))
+    if not pools["WITHIN"] or not pools["BOUNDARY"] or not pools["OUTSIDE"]:
+        raise RuntimeError("failed to build semantic tolerance pair pools")
+    return pools
+
+
+def _build_semantic_taxonomy_indexes() -> tuple[
+    dict[str, list[str]],
+    dict[str, dict[tuple[str, str], list[str]]],
+    list[str],
+]:
+    from mandate_guard.taxonomy import TAXONOMY_LEAVES
+
+    leaves_by_category: dict[str, list[str]] = {}
+    parent_leaves_by_category: dict[str, dict[tuple[str, str], list[str]]] = {}
+    for leaf in TAXONOMY_LEAVES:
+        parts = leaf.split(" > ")
+        category = parts[0]
+        parent_key = (parts[0], parts[1])
+        leaves_by_category.setdefault(category, []).append(leaf)
+        parent_leaves_by_category.setdefault(category, {}).setdefault(
+            parent_key, []
+        ).append(leaf)
+    top_levels = sorted(leaves_by_category.keys())
+    return leaves_by_category, parent_leaves_by_category, top_levels
+
+
+LEAF_BASE_PRICE: dict[str, int] = _build_leaf_base_price_table()
+_TOLERANCE_PAIR_POOLS: dict[str, list[tuple[float, float]]] = (
+    _build_tolerance_pair_pools()
+)
+_LEAVES_BY_CATEGORY, _PARENT_LEAVES_BY_CATEGORY, _TOP_LEVEL_CATEGORIES = (
+    _build_semantic_taxonomy_indexes()
+)
+
+
+def _sample_tolerance_pair(
+    rng: random.Random,
+    target: str,
+) -> tuple[float, float]:
+    return rng.choice(_TOLERANCE_PAIR_POOLS[target])
+
+
+def _sample_any_tolerance_pair(rng: random.Random) -> tuple[float, float]:
+    target = rng.choice(("WITHIN", "BOUNDARY", "OUTSIDE"))
+    return _sample_tolerance_pair(rng, target)
+
+
+def _pick_same_leaf(rng: random.Random, category_leaves: list[str]) -> tuple[str, str]:
+    leaf = rng.choice(category_leaves)
+    return leaf, leaf
+
+
+def _pick_sibling_pair(
+    rng: random.Random,
+    category: str,
+) -> tuple[str, str]:
+    parent_map = _PARENT_LEAVES_BY_CATEGORY[category]
+    eligible_parents = [
+        parent for parent, leaves in parent_map.items() if len(leaves) >= 2
+    ]
+    parent = rng.choice(eligible_parents)
+    leaves = parent_map[parent]
+    intent_leaf = rng.choice(leaves)
+    cart_leaf = rng.choice([leaf for leaf in leaves if leaf != intent_leaf])
+    return intent_leaf, cart_leaf
+
+
+def _pick_diff_parent_pair(
+    rng: random.Random,
+    category: str,
+) -> tuple[str, str]:
+    parent_map = _PARENT_LEAVES_BY_CATEGORY[category]
+    parent_a, parent_b = rng.sample(list(parent_map.keys()), 2)
+    intent_leaf = rng.choice(parent_map[parent_a])
+    cart_leaf = rng.choice(parent_map[parent_b])
+    return intent_leaf, cart_leaf
+
+
+def _pick_cross_top_pair(
+    rng: random.Random,
+    category: str,
+) -> tuple[str, str]:
+    other_categories = [name for name in _TOP_LEVEL_CATEGORIES if name != category]
+    other_category = rng.choice(other_categories)
+    intent_leaf = rng.choice(_LEAVES_BY_CATEGORY[category])
+    cart_leaf = rng.choice(_LEAVES_BY_CATEGORY[other_category])
+    return intent_leaf, cart_leaf
+
+
+def _pick_leaves_for_semantic_case(
+    rng: random.Random,
+    case_type: str,
+    category: str,
+) -> tuple[str, str]:
+    category_leaves = _LEAVES_BY_CATEGORY[category]
+    if case_type == "same_leaf":
+        return _pick_same_leaf(rng, category_leaves)
+    if case_type == "sibling":
+        return _pick_sibling_pair(rng, category)
+    if case_type == "diff_parent":
+        return _pick_diff_parent_pair(rng, category)
+    if case_type == "cross_top":
+        return _pick_cross_top_pair(rng, category)
+    raise ValueError(f"unknown semantic case type {case_type!r}")
+
+
+def generate_semantic_corpus(
+    rng: random.Random,
+    now: datetime,
+) -> list[dict[str, object]]:
+    from mandate_guard.semantic_record_builder import build_semantic_record
+
+    records: list[dict[str, object]] = []
+    index = 0
+    for category in _TOP_LEVEL_CATEGORIES:
+        for (
+            case_type,
+            tolerance_target,
+            rationale_present,
+            count,
+        ) in _CATEGORY_COMPOSITION:
+            for _ in range(count):
+                intent_leaf, cart_leaf = _pick_leaves_for_semantic_case(
+                    rng,
+                    case_type,
+                    category,
+                )
+                if tolerance_target is None:
+                    amount_ratio, quantity_ratio = _sample_any_tolerance_pair(rng)
+                else:
+                    amount_ratio, quantity_ratio = _sample_tolerance_pair(
+                        rng,
+                        tolerance_target,
+                    )
+                rationale = (
+                    rationale_present if rationale_present is not None else False
+                )
+                records.append(
+                    build_semantic_record(
+                        rng,
+                        index,
+                        category,
+                        intent_leaf,
+                        cart_leaf,
+                        amount_ratio,
+                        quantity_ratio,
+                        rationale,
+                        now,
+                        base_unit_price_minor_units=LEAF_BASE_PRICE[intent_leaf],
+                    )
+                )
+                index += 1
+    return records
+
+
 def generate_corpus(split: str, output_dir: Path, now: datetime) -> None:
     sums_path = output_dir / "SHA256SUMS"
     if sums_path.exists():
@@ -1145,6 +1370,11 @@ def generate_corpus(split: str, output_dir: Path, now: datetime) -> None:
         rng = random.Random(seed)
         attacks = generate_attacks(rng, 25, now, [8, 9, 10, 11, 12, 13])
         files = {"attacks.jsonl": attacks}
+    elif split == "sealed_semantic":
+        seed = 271
+        rng = random.Random(seed)
+        records = generate_semantic_corpus(rng, now)
+        files = {"semantic.jsonl": records}
     else:
         raise ValueError(f"unknown split {split!r}")
 
@@ -1164,7 +1394,11 @@ def generate_corpus(split: str, output_dir: Path, now: datetime) -> None:
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate mandate-guard corpus.")
-    parser.add_argument("--split", choices=["dev", "sealed"], required=True)
+    parser.add_argument(
+        "--split",
+        choices=["dev", "sealed", "sealed_semantic"],
+        required=True,
+    )
     parser.add_argument("--output-dir", type=Path, default=None)
     parser.add_argument(
         "--now",
@@ -1178,7 +1412,12 @@ def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     now = datetime.fromisoformat(args.now)
     if args.output_dir is None:
-        output_dir = Path("data/dev" if args.split == "dev" else "data/sealed")
+        if args.split == "dev":
+            output_dir = Path("data/dev")
+        elif args.split == "sealed_semantic":
+            output_dir = Path("data/sealed_semantic")
+        else:
+            output_dir = Path("data/sealed")
     else:
         output_dir = args.output_dir
     generate_corpus(args.split, output_dir, now)
