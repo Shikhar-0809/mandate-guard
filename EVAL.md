@@ -41,6 +41,17 @@ development. Performance on families 8–12 and family 13 is reported separately
 Report `recall_seen` and `recall_unseen` separately.
 **`recall_unseen` is the headline number.**
 
+Dev metrics in `baselines.json` are reported under two intent conditions:
+**full-intent** (`*_full_intent` fields) loads `*_with_intent.jsonl` sidecars
+when present (matches training corpus and production once M3 distinguishes
+intent-present traffic); **no-intent** (`*_no_intent` fields) loads base
+`data/dev/*.jsonl` files only (exercises M3's `NO_SEMANTIC_EVIDENCE` path).
+This replaces a previously undisclosed asymmetry: benign and hard-negative
+records were silently evaluated no-intent while attack families 1–7/14–15
+were silently evaluated full-intent because those families bake
+`purchase_intent` into the base file at generation time. Sealed metrics
+(`eval_recall_unseen`) are a single pass — no `_with_intent` sidecar exists.
+
 `recall_unseen` is reported at two granularities:
 - **Family-level**: fraction of unseen attack families where at least one
   record is correctly blocked. A family with 25/25 records blocked and a

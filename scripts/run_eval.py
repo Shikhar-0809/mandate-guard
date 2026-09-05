@@ -12,6 +12,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Literal, TypedDict
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC = PROJECT_ROOT / "src"
@@ -44,19 +45,91 @@ BASELINE_NAMES: tuple[BaselineName, ...] = (
     "t0_only",
 )
 
+_DEV_BASE_FILES: tuple[str, ...] = (
+    "benign.jsonl",
+    "hard_negatives.jsonl",
+    "attacks.jsonl",
+)
 
-def _load_dev(dev_dir: Path) -> list[dict[str, object]]:
+IntentMode = Literal["base", "with_intent"]
+
+
+class DevEvalMetrics(TypedDict):
+    eval_tau_star: float
+    eval_recall_seen: float
+    eval_t1_precision_at_prior: float
+    eval_t1_recall: float
+    eval_t1_fpr_hard_negatives: float
+    eval_t1_pr_auc: float
+    eval_t1_net_cost_per_10k: float
+
+
+def _dev_jsonl_path(
+    dev_dir: Path,
+    base_filename: str,
+    intent_mode: IntentMode,
+) -> Path:
+    base_path = dev_dir / base_filename
+    if intent_mode == "base":
+        return base_path
+    sidecar_path = dev_dir / base_filename.replace(".jsonl", "_with_intent.jsonl")
+    return sidecar_path if sidecar_path.exists() else base_path
+
+
+def _load_dev(dev_dir: Path, intent_mode: IntentMode = "base") -> list[dict[str, object]]:
     for line in (dev_dir / "SHA256SUMS").read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
         digest, filename = line.split("  ", 1)
         _verify_sha256(dev_dir, filename, digest)
     records: list[dict[str, object]] = []
-    for filename in ("benign.jsonl", "hard_negatives.jsonl", "attacks.jsonl"):
-        for line in (dev_dir / filename).read_text(encoding="utf-8").splitlines():
+    for filename in _DEV_BASE_FILES:
+        path = _dev_jsonl_path(dev_dir, filename, intent_mode)
+        for line in path.read_text(encoding="utf-8").splitlines():
             if line.strip():
                 records.append(json.loads(line))
     return records
+
+
+def _compute_dev_eval_metrics(
+    dev_records: list[dict[str, object]],
+    model_dir: Path,
+    prior: float,
+) -> DevEvalMetrics:
+    t1_scores = [score_t0_t1(record, model_dir) for record in dev_records]
+    tau_star, _ = find_cost_optimal_threshold(dev_records, t1_scores)
+    t1_metrics = compute_metrics(dev_records, t1_scores, tau_star, prior=prior)
+    dev_attack_records = [
+        record for record in dev_records if str(record["label"]) == "BLOCK"
+    ]
+    dev_attack_scores = [
+        score_t0_t1(record, model_dir) for record in dev_attack_records
+    ]
+    recall_seen = recall_on_records(dev_attack_records, dev_attack_scores, tau_star)
+    return {
+        "eval_tau_star": tau_star,
+        "eval_recall_seen": recall_seen,
+        "eval_t1_precision_at_prior": t1_metrics["precision_at_prior"],
+        "eval_t1_recall": t1_metrics["recall"],
+        "eval_t1_fpr_hard_negatives": t1_metrics["fpr_hard_negatives"],
+        "eval_t1_pr_auc": t1_metrics["pr_auc"],
+        "eval_t1_net_cost_per_10k": t1_metrics["net_cost_per_10k"],
+    }
+
+
+def _suffix_dev_metrics(
+    metrics: DevEvalMetrics,
+    suffix: Literal["_no_intent", "_full_intent"],
+) -> dict[str, float]:
+    return {
+        f"eval_tau_star{suffix}": metrics["eval_tau_star"],
+        f"eval_recall_seen{suffix}": metrics["eval_recall_seen"],
+        f"eval_t1_precision_at_prior{suffix}": metrics["eval_t1_precision_at_prior"],
+        f"eval_t1_recall{suffix}": metrics["eval_t1_recall"],
+        f"eval_t1_fpr_hard_negatives{suffix}": metrics["eval_t1_fpr_hard_negatives"],
+        f"eval_t1_pr_auc{suffix}": metrics["eval_t1_pr_auc"],
+        f"eval_t1_net_cost_per_10k{suffix}": metrics["eval_t1_net_cost_per_10k"],
+    }
 
 
 def _format_metrics_row(name: str, metrics: dict[str, float]) -> str:
@@ -106,46 +179,73 @@ def main() -> None:
 
     dev_dir = PROJECT_ROOT / "data" / "dev"
     sealed_dir = PROJECT_ROOT / "data" / "sealed"
-    dev_records = _load_dev(dev_dir)
+    dev_records_no_intent = _load_dev(dev_dir, intent_mode="base")
+    dev_records_full_intent = _load_dev(dev_dir, intent_mode="with_intent")
     sealed_records = load_sealed_attacks(sealed_dir)
 
-    n_benign = sum(1 for record in dev_records if str(record["family"]) == "benign")
-    n_hn = sum(1 for record in dev_records if str(record["family"]).startswith("hn_"))
-    n_attacks = sum(1 for record in dev_records if str(record["label"]) == "BLOCK")
+    n_benign = sum(
+        1 for record in dev_records_no_intent if str(record["family"]) == "benign"
+    )
+    n_hn = sum(
+        1
+        for record in dev_records_no_intent
+        if str(record["family"]).startswith("hn_")
+    )
+    n_attacks = sum(
+        1 for record in dev_records_no_intent if str(record["label"]) == "BLOCK"
+    )
     n_sealed = len(sealed_records)
 
     baseline_scores: dict[BaselineName, list[float]] = {}
     for name in BASELINE_NAMES:
-        baseline_scores[name] = [score_baseline(name, record) for record in dev_records]
+        baseline_scores[name] = [
+            score_baseline(name, record) for record in dev_records_no_intent
+        ]
 
-    t1_scores = [score_t0_t1(record, args.model_dir) for record in dev_records]
-    tau_star, _ = find_cost_optimal_threshold(dev_records, t1_scores)
+    dev_metrics_no_intent = _compute_dev_eval_metrics(
+        dev_records_no_intent,
+        args.model_dir,
+        args.prior,
+    )
+    dev_metrics_full_intent = _compute_dev_eval_metrics(
+        dev_records_full_intent,
+        args.model_dir,
+        args.prior,
+    )
+    tau_star = dev_metrics_no_intent["eval_tau_star"]
 
     baseline_threshold = 0.5
     baseline_metrics: dict[BaselineName, dict[str, float]] = {}
     for name in BASELINE_NAMES:
         baseline_metrics[name] = compute_metrics(
-            dev_records,
+            dev_records_no_intent,
             baseline_scores[name],
             baseline_threshold,
             prior=args.prior,
         )
 
-    t1_metrics = compute_metrics(dev_records, t1_scores, tau_star, prior=args.prior)
-
-    dev_attack_records = [
-        record for record in dev_records if str(record["label"]) == "BLOCK"
+    t1_scores_no_intent = [
+        score_t0_t1(record, args.model_dir) for record in dev_records_no_intent
     ]
-    dev_attack_scores = [
-        score_t0_t1(record, args.model_dir) for record in dev_attack_records
-    ]
-    recall_seen = recall_on_records(dev_attack_records, dev_attack_scores, tau_star)
+    t1_metrics_no_intent = compute_metrics(
+        dev_records_no_intent,
+        t1_scores_no_intent,
+        tau_star,
+        prior=args.prior,
+    )
 
     sealed_scores = [score_t0_t1(record, args.model_dir) for record in sealed_records]
     recall_unseen = recall_on_records(sealed_records, sealed_scores, tau_star)
 
-    curve = precision_vs_prevalence(dev_records, t1_scores, tau_star)
+    curve = precision_vs_prevalence(
+        dev_records_no_intent,
+        t1_scores_no_intent,
+        tau_star,
+    )
 
+    dev_attack_records = [
+        record for record in dev_records_no_intent if str(record["label"]) == "BLOCK"
+    ]
     t2_off = T2Config(t2_enabled=False)
     cascade_dev_attack_verdicts = [
         _run_cascade_on_record(record, args.model_dir, tau_star, t2_off)
@@ -164,7 +264,9 @@ def main() -> None:
     ) / len(sealed_records)
 
     hard_negative_records = [
-        record for record in dev_records if str(record["family"]).startswith("hn_")
+        record
+        for record in dev_records_no_intent
+        if str(record["family"]).startswith("hn_")
     ]
     cascade_hn_verdicts = [
         _run_cascade_on_record(record, args.model_dir, tau_star, t2_off)
@@ -187,16 +289,27 @@ def main() -> None:
         "              [ASSUMPTION — see config/cost_model.yaml when built]"
     )
     print()
-    print(f"Cost-optimal threshold (τ*): {tau_star:.3f}")
+    print(f"Cost-optimal threshold (τ*, no-intent dev): {tau_star:.3f}")
+    print(
+        "Cost-optimal threshold (τ*, full-intent dev): "
+        f"{dev_metrics_full_intent['eval_tau_star']:.3f}"
+    )
     print()
     print("--- Baseline comparison (dev corpus, τ=0.5 for baselines) ---")
     print(f"{'':28} prec@prior  recall   fpr_hn   pr_auc   cost/10k")
     for name in BASELINE_NAMES:
         print(_format_metrics_row(name, baseline_metrics[name]))
-    print(_format_metrics_row("T0+T1 (at τ*)", t1_metrics))
+    print(_format_metrics_row("T0+T1 (at τ*, no-intent)", t1_metrics_no_intent))
     print()
-    print("--- Recall split ---")
-    print(f"recall_seen  (dev  families 1-7): {recall_seen:.4f}")
+    print("--- Recall split (no-intent dev / sealed) ---")
+    print(
+        "recall_seen  (dev  families 1-7): "
+        f"{dev_metrics_no_intent['eval_recall_seen']:.4f}"
+    )
+    print(
+        "recall_seen  (dev, full-intent):    "
+        f"{dev_metrics_full_intent['eval_recall_seen']:.4f}"
+    )
     print(f"recall_unseen (sealed families 8-12): {recall_unseen:.4f}")
     print()
     print("--- Cascade validation (Verdict BLOCK/HOLD rates at τ*) ---")
@@ -225,17 +338,22 @@ def main() -> None:
         "eval_cascade_recall_unseen": eval_cascade_recall_unseen,
         "eval_cascade_hold_rate_hard_negatives": eval_cascade_hold_rate_hard_negatives,
     }
+    for old_key in (
+        "eval_tau_star",
+        "eval_recall_seen",
+        "eval_t1_precision_at_prior",
+        "eval_t1_recall",
+        "eval_t1_fpr_hard_negatives",
+        "eval_t1_pr_auc",
+        "eval_t1_net_cost_per_10k",
+    ):
+        existing.pop(old_key, None)
     existing.update(
         {
-            "eval_tau_star": tau_star,
-            "eval_recall_seen": recall_seen,
             "eval_recall_unseen": recall_unseen,
-            "eval_t1_precision_at_prior": t1_metrics["precision_at_prior"],
-            "eval_t1_recall": t1_metrics["recall"],
-            "eval_t1_fpr_hard_negatives": t1_metrics["fpr_hard_negatives"],
-            "eval_t1_pr_auc": t1_metrics["pr_auc"],
-            "eval_t1_net_cost_per_10k": t1_metrics["net_cost_per_10k"],
             "baselines_compared": list(BASELINE_NAMES),
+            **_suffix_dev_metrics(dev_metrics_no_intent, "_no_intent"),
+            **_suffix_dev_metrics(dev_metrics_full_intent, "_full_intent"),
             **cascade_updates,
         }
     )

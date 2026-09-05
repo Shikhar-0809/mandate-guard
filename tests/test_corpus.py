@@ -390,3 +390,58 @@ def test_hard_negative_difficulty() -> None:
         / len(hard_negatives)
     )
     assert hn_fp >= benign_fp + 0.05, f"benign_fp={benign_fp} hn_fp={hn_fp}"
+
+
+_RUN_EVAL_SPEC = importlib.util.spec_from_file_location(
+    "run_eval", PROJECT_ROOT / "scripts" / "run_eval.py"
+)
+assert _RUN_EVAL_SPEC is not None and _RUN_EVAL_SPEC.loader is not None
+_run_eval = importlib.util.module_from_spec(_RUN_EVAL_SPEC)
+sys.modules[_RUN_EVAL_SPEC.name] = _run_eval
+_RUN_EVAL_SPEC.loader.exec_module(_run_eval)
+_load_dev = _run_eval._load_dev
+
+
+def _write_sha256sums(directory: Path, filenames: list[str]) -> None:
+    lines: list[str] = []
+    for filename in filenames:
+        digest = hashlib.sha256((directory / filename).read_bytes()).hexdigest()
+        lines.append(f"{digest}  {filename}\n")
+    (directory / "SHA256SUMS").write_text("".join(lines), encoding="utf-8")
+
+
+def test_load_dev_intent_modes(tmp_path: Path) -> None:
+    record_a_base = {"record_id": "record-a", "purchase_intent": ""}
+    record_a_full = {"record_id": "record-a", "purchase_intent": "buy Widget"}
+    attack_intent = "buy Sony noise cancelling headphones"
+    record_b = {"record_id": "record-b", "purchase_intent": attack_intent}
+
+    for name, content in (
+        ("benign.jsonl", record_a_base),
+        ("benign_with_intent.jsonl", record_a_full),
+        ("hard_negatives.jsonl", {"record_id": "hn-empty", "purchase_intent": ""}),
+        ("hard_negatives_with_intent.jsonl", {"record_id": "hn-empty", "purchase_intent": ""}),
+        ("attacks.jsonl", record_b),
+        ("attacks_with_intent.jsonl", record_b),
+    ):
+        (tmp_path / name).write_text(
+            json.dumps(content) + "\n",
+            encoding="utf-8",
+        )
+    _write_sha256sums(
+        tmp_path,
+        ["benign.jsonl", "hard_negatives.jsonl", "attacks.jsonl"],
+    )
+
+    no_intent = _load_dev(tmp_path, intent_mode="base")
+    full_intent = _load_dev(tmp_path, intent_mode="with_intent")
+
+    no_intent_a = next(r for r in no_intent if r["record_id"] == "record-a")
+    full_intent_a = next(r for r in full_intent if r["record_id"] == "record-a")
+    no_intent_b = next(r for r in no_intent if r["record_id"] == "record-b")
+    full_intent_b = next(r for r in full_intent if r["record_id"] == "record-b")
+
+    assert no_intent_a["purchase_intent"] == ""
+    assert full_intent_a["purchase_intent"] == "buy Widget"
+    assert no_intent_b["purchase_intent"] == attack_intent
+    assert full_intent_b["purchase_intent"] == attack_intent

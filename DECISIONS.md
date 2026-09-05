@@ -566,3 +566,26 @@ retrain needed, real fix not a shim.
 Rejected: Leaving it and documenting as a known limitation — rejected per
 standing anti-shim principle; a real fix (retrain) was available.
 Revisit: N/A — closed by this diff.
+
+## D046 — Dev eval metrics reported under both full-intent and no-intent conditions
+Date: 2026-09-05
+Context: run_eval.py's headline metrics (eval_recall_seen, eval_recall_unseen,
+eval_t1_fpr_hard_negatives) read only base corpus files. For attack families
+1-7/14-15, base files have real purchase_intent baked in (identical to
+_with_intent sidecars). For benign and hard-negative records, base files
+always have purchase_intent="" by design (D016), with real intent only in
+_with_intent sidecars. This meant eval silently measured the no-intent
+condition for benign/HN and the full-intent condition for attacks - an
+undisclosed asymmetry, not a bug in the D016 split itself.
+Choice: Report both conditions explicitly as separate metric fields
+(_full_intent / _no_intent suffixes) rather than preferring one file over
+the other. Both conditions are real and meaningful: no-intent is exactly
+the population M3's NO_SEMANTIC_EVIDENCE contract exists to handle
+correctly, so eval must keep measuring it, not lose it in favor of the
+sidecar.
+Rejected: Preferring the sidecar file whenever it exists and dropping the
+base-file condition - rejected because it silently stops testing the
+no-intent path for benign/HN, replacing one blind spot with another
+rather than disclosing what eval actually measures.
+Revisit: If M1's independent semantic sealed set adopts a different intent-
+population convention, confirm this dual-reporting pattern still applies.
