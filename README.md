@@ -67,34 +67,51 @@ criterion was not pre-registered before family 13 existed (D008/D020).
 
 **M1 semantic corpus (pre-registered, D053/D057):** a purpose-built 500-record
 corpus with genuine per-record diversity, designed specifically to test
-semantic substitution/ambiguity at real scale. Here T2 **fails** its
-pre-registered kill criterion in both required directions: recall on
-genuine deviations drops from 0.853 to 0.768 (T2 makes recall worse, not
-better), and the false-positive rate on hard negatives rises from 0.133 to
-0.164 (T2 also blocks more legitimate traffic). Full result and derivation
-in D059.
+semantic substitution/ambiguity at real scale. The T2 kill criterion was
+**not met** on this corpus at the only operating point tested (τ=0.17,
+chosen under pre-D060 cost accounting later found incorrect). That operating
+point is unreachable under corrected cost accounting (D062); the previously
+reported magnitudes (recall 0.853→0.768 on deviations, hard-negative block
+rate 0.133→0.164) cannot be cited as current. T2 has not demonstrated a
+benefit in any measurement attempted so far on a pre-registered corpus at a
+defensible τ. The qualitative direction of the M1 comparison (T2 did not
+clearly help) remains provisionally plausible but is unconfirmed pending S2
+(structural T1 features) and a rerun at whatever τ the corrected optimizer
+selects on the improved feature set. See D062.
 
-**Read together:** T2's only positive, pre-registered result is a regression.
-Its one favorable number is post-hoc and drawn from a narrow, repetitive
-challenge set. This is reported plainly rather than leading with the
-favorable number and omitting the negative one. `t2_enabled=False` remains
-the default (D008, reaffirmed by D059). T2 ships wired, tested, and
-documented — an architectural bet on the AP2 gap argument, not a metrics win.
+**Read together:** T2 has not demonstrated a metrics win on any
+pre-registered measurement at a defensible operating point. Its one favorable
+number is post-hoc and drawn from a narrow, repetitive challenge set. This is
+reported plainly rather than leading with the favorable number and omitting
+the negative one. `t2_enabled=False` remains the default (D008, unchanged).
+T2 ships wired, tested, and documented — an architectural bet on the AP2 gap
+argument, not a confirmed metrics win.
 
 ## A second honest finding: cost-threshold optimization breaks at realistic priors
 
-While deriving an operating threshold for the M1 corpus, naive cost-optimal
-threshold selection (`argmin_τ FP·₹320 + FN·₹1470 + HOLD·₹45`) produced two
-different degenerate results depending on how the corpus's class balance was
-handled: raw counts drove the threshold to block 97.5% of legitimate traffic;
-correcting for the true 0.8% attack prior drove it the opposite direction,
-missing 98% of real fraud. Neither is a usable operating point — the stated
-4.6:1 FN:FP cost ratio is not large enough to overcome a 124:1 base-rate skew
-at realistic priors, on this corpus's specific error curve. Full derivation
-in D058. This is disclosed as a real, general limitation of single-threshold
-cost optimization at low prevalence — not a defect specific to this corpus,
-and directly relevant to anyone deploying a similar detector at a realistic
-fraud rate.
+While deriving an operating threshold for the M1 corpus, cost-optimal threshold
+selection (`argmin_τ FP·₹320 + FN·₹1470 + HOLD·₹45`) fails to yield a usable
+interior operating point. Post-fix (D060), both raw-count and true-prior
+(0.008) optimization land at the **same** corner — τ=1.00, missing ~98% of
+fraud — not opposite corners as originally reported. The original
+"opposite-direction" framing was partly an artifact of the pre-D060
+double-counting bug.
+
+D061 added a HOLD-capacity constraint (`max_hold_rate`) so the optimizer cannot
+treat unlimited deferral as free. This eliminates that corner but still does
+not produce a usable interior threshold: the corrected optimizer only offers
+two corner-like regimes depending on the capacity assumption — block nearly all
+traffic (fp~195/200 ALLOW) at low HOLD capacity, or block most traffic while
+deferring ~20% (fp~121–136) at higher HOLD capacity. No smooth interior
+tradeoff exists between them on this corpus.
+
+This is now understood as likely a class-separation problem in T1's current
+features on the M1 corpus, not a cost-model problem per se — see D062 and S2
+(structural features, CHANGES.md). Full derivation: D058, D060, D061, D062.
+This is disclosed as a real, general limitation of single-threshold cost
+optimization at low prevalence — not a defect specific to this corpus, and
+directly relevant to anyone deploying a similar detector at a realistic fraud
+rate.
 
 ## Corpus
 
