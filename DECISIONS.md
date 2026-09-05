@@ -787,3 +787,36 @@ Revisit: If generation reveals the adjudication rule produces an
 unworkable UNCERTAIN rate (too high or suspiciously near-zero), stop
 generation and revise the rule before continuing - do not silently
 force records into ALLOW/DEVIATION to hit a target distribution.
+
+## D054 — Semantic adjudication rule: tolerance constants and D053 gap-fills
+Date: 2026-09-05
+Approved by: Shikhar (explicit delegation - "do whatever's best, real
+fixes only, not band-aids" - 2026-09-05), engineering completion by Claude.
+Context: D053's adjudication rule leaves three points underspecified as
+prose: (1) no tolerance value for "within intent's stated amount/quantity
+tolerance", (2) no operationalization of UNCERTAIN as executable logic,
+(3) two cases (same-leaf-outside-tolerance; sibling-with-rationale-
+outside-tolerance) aren't named by either ALLOW's conjunction or
+DEVIATION's two disjuncts.
+Choice:
+- Tolerance: NEW constants, not reused from existing code. WITHIN if
+  abs(ratio-1.0)<=0.10, BOUNDARY if <=0.20, OUTSIDE beyond. Checked
+  against hn_price_drift (+1-2%, sits inside WITHIN - consistent) and
+  T1's quantity_mismatch flag band ([0.5,2.0] - far wider than my OUTSIDE
+  cutoff, confirming this is a distinct, tighter, purpose-built band, not
+  a duplicate of an existing flag threshold).
+- UNCERTAIN's primary source is "same top-level category, different
+  immediate parent" (D054 branch 4) - the direct structural match for
+  D053's own definition, not an invented case. Present in all 10
+  categories (4-7 distinct parents each, confirmed via taxonomy dump).
+- Two named gap-fills: same-leaf-outside-tolerance -> DEVIATION (amount
+  manipulation on an identical SKU, nothing ambiguous about it);
+  sibling-with-rationale-outside-tolerance -> UNCERTAIN (stated rationale
+  contradicts the amount, genuinely mixed signal).
+Rejected: Reusing hn_price_drift's percentage or quantity_mismatch's
+ratio band directly - both are purpose-built for different measurement
+questions (obviously-fine vs obviously-wrong) and reusing either would
+either collapse WITHIN to near-nothing or ALLOW to near-everything.
+Revisit: If M1 generation produces an UNCERTAIN rate that's unworkable
+per D053's own revisit trigger, reconsider the 0.10/0.20 boundary widths
+first before touching the branch structure.
