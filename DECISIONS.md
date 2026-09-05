@@ -1290,3 +1290,36 @@ Rejected: N/A -- first measurement, nothing to compare against or reject.
 Revisit: Once S2's remaining structural features (brand_equality,
 sku_equality, etc.) land, re-measure held-out precision/PR-AUC/cost to
 see whether the generalization gap narrows.
+
+## D069 — Accept regenerated baselines.json under D064's corrected model
+Date: 2026-09-05
+Context: baselines.json was never regenerated-and-accepted after D064's
+cost-model fix; every prior live run this session was reverted rather
+than committed, leaving no citable committed source for corrected
+dev-corpus cost/precision figures. Needed before README could cite
+current numbers instead of stale pre-D064 ones.
+Choice: Ran scripts/run_eval.py fresh, verified tau_star=0.220 (full-
+intent) is a genuine minimum via direct sweep matching the real call
+signature (raw fp*320+fn*1470 counts, no prior -- confirmed
+tau=0.18-0.22 tied at cost=7040.0, all other tau strictly worse).
+Accepting the resulting baselines.json. Changed keys, all decreases
+reflecting removal of the fictional HOLD-cost discount:
+eval_t1_net_cost_per_10k_no_intent 108179.01->49.63,
+eval_t1_net_cost_per_10k_full_intent 268904.32->52.78,
+eval_cost_optimizer_total_no_intent 14020.0->13750.0,
+eval_cost_optimizer_total_full_intent 34850.0->7040.0. New key added:
+eval_recall_unseen=0.8333 (previously absent from this file). All
+recall/AUC/precision_at_prior figures unchanged, as expected --
+D064 only touched cost computation and tau selection, not the
+confusion-matrix or precision/PR-AUC math.
+Noted methodological asymmetry for disclosure: dev-corpus tau selection
+uses raw FP/FN counts (no prior-weighting, no cost-ratio applied beyond
+the stated fp_cost/fn_cost); M1-corpus tau selection (D058) uses a
+simplified 1:1 FN:FP ratio, not the project's stated 4.6:1. Both are
+disclosed choices, not bugs, but inconsistent conventions across corpora
+-- worth stating plainly rather than leaving implicit.
+Rejected: Continuing to revert this file indefinitely -- leaves README
+and any future citation with no committed source of truth, the same gap
+already closed for baselines_sealed_semantic.json (D065-D068).
+Revisit: If S2's remaining structural features change T1 scoring
+materially, re-run and re-accept following this same pattern.

@@ -40,7 +40,8 @@ Three separate populations, reported separately — not one blended number.
 
 | Population | Recall | Notes |
 |------------|--------|-------|
-| Dev families 1–7, 14–15 (recall_seen) | 1.000 | T0+T1 |
+| Dev, no-intent (recall_seen) | 0.982 | T0+T1; misses 5 records (hn_post_auth_cart_mutation cross-category swaps, D064) that score below τ=1.0 without intent signal |
+| Dev, full-intent (recall_seen) | 1.000 | T0+T1 at τ=0.220; same 5 records caught once intent is available |
 | Sealed families 8–12, pre-registered (recall_unseen) | 1.000 | T0+T1, τ=1.0 |
 | Sealed family 13, post-hoc challenge, T0+T1 only | 0.000 | T0 passes by design; T1 alone does not catch it |
 | Sealed family 13, post-hoc challenge, T0+T1+T2 | 1.000 | +100pp with T2 enabled |
@@ -48,8 +49,15 @@ Three separate populations, reported separately — not one blended number.
 | Metric | Value |
 |--------|-------|
 | T1 AUC (holdout) | 0.9646 |
-| T1 precision@prior (0.8% attack rate) | 0.288 |
-| Tests passing | 342 |
+| T1 precision@prior, no-intent (0.8% attack rate) | 0.288 |
+| T1 precision@prior, full-intent | 0.272 |
+| T1 PR-AUC, no-intent | 0.918 |
+| T1 PR-AUC, full-intent | 0.931 |
+| Net cost/10k txns, no-intent | ₹49.6 |
+| Net cost/10k txns, full-intent | ₹52.8 |
+| Cost-optimal τ, no-intent | 1.000 |
+| Cost-optimal τ, full-intent | 0.220 |
+| Tests passing | 347 |
 
 **Sealed-set integrity note:** Families 8–12 are pre-registered (SHA-256
 committed before development). Family 13 is a post-hoc challenge set added
@@ -87,6 +95,33 @@ the negative one. `t2_enabled=False` remains the default (D008, unchanged).
 T2 ships wired, tested, and documented — an architectural bet on the AP2 gap
 argument, not a confirmed metrics win.
 
+## Precision, PR-AUC, and cost — measured on held-out data (D067/D068)
+
+Recall above is reported on both dev (tuned) and sealed (held-out)
+populations. Precision and FP cost were, until this session, only ever
+measured on the dev corpus that tau and features are tuned against.
+D067/D068 close that gap: `compute_metrics` run against the M1 semantic
+corpus (390 frozen records, 200 ALLOW / 190 BLOCK, held out, never
+tuned on) at its independently-derived cost-optimal τ=0.170.
+
+| Metric | Held-out value | Dev value (context) |
+|--------|-----------------|----------------------|
+| Precision@prior (0.8%) | 0.0137 | 0.272–0.288 |
+| PR-AUC | 0.614 | 0.918–0.931 |
+| Net cost/10k txns | ₹4,073.50 | ₹49.6–52.8 |
+
+Both drops are expected, not defects. Precision at a ~0.8% real-world
+attack prior is low arithmetic regardless of detector quality — 0.0137
+means roughly 1-in-73 BLOCK verdicts is a genuine attack, which is why
+this project reports cost-weighted metrics (FN:FP ≈ 4.6:1) rather than
+precision or F1 as the operating criterion. The PR-AUC gap (0.93→0.61)
+is an honest generalization gap: T1's current features are lexical
+similarity measures (jaccard, trigram, tf-idf, plus one structural
+feature), which separate classes well on the corpus they were validated
+against and less well on genuinely held-out data. Closing this gap is
+S2's remaining, unshipped scope (brand_equality, sku_equality,
+numeric_amount_difference_ratio, attribute_conflict).
+
 ## A second honest finding: cost-threshold optimization breaks at realistic priors
 
 While deriving an operating threshold for the M1 corpus, cost-optimal threshold
@@ -117,6 +152,14 @@ tracked as S2's continued relevance. Full derivation: D058, D060, D061
 a real, disclosed limitation of single-threshold cost optimization at low
 prevalence.
 
+Note on threshold-selection methodology, stated plainly rather than left
+for a reader to reverse-engineer: dev-corpus τ is selected on raw FP/FN
+counts with no prior-weighting applied at selection time (D069); the
+M1-corpus τ (D058) uses a simplified 1:1 FN:FP ratio rather than this
+project's stated 4.6:1 cost ratio. Both are disclosed, deliberate
+choices — but they are different conventions, not one consistent rule
+applied across corpora.
+
 ## Corpus
 
 | Split | Records | Families |
@@ -138,12 +181,30 @@ Corpora are fully synthetic. All generation parameters live in
 | block-everything | 1.000 | FPR = 1.000 |
 | amount-threshold | 0.407 | Misses non-amount families |
 | regex injection detector | 0.000 | Wrong task — see EVAL.md §Three-way injection experiment |
-| T0 only | 0.870 | Misses semantic families 13–15 |
+| T0 only | 0.833 | Misses family 13; identical to T0+T1 on this population -- T1 adds no recall without intent populated |
 | T0+T1+T2 | 1.000 | This system, sealed families 8–13 combined |
 
 Beating the regex baseline is not a close win — it is a category mismatch.
 Mandate deviation is a property of (intent, cart, payment) triples. A regex
 detector operates on individual field strings.
+
+## Local demo
+
+A FastAPI endpoint and single-page UI let you exercise the cascade
+interactively, locally, no cloud dependency.
+
+```powershell
+python -m uvicorn mandate_guard.api:app --app-dir src --reload --port 8000
+```
+
+Open http://localhost:8000. Six preset scenarios cover T0 (amount over
+cap, wrong merchant, cart tampering after approval), T1 (brand
+substitution, post-auth SKU swap — the exact archetype whose scoring bug
+this session's cost-model investigation started from; τ=0.220 correctly
+blocks it at score 0.228), and one legitimate baseline. Each preset runs
+the check immediately on click — no typing required for the core demo.
+An "Enable T2" toggle exercises the LLM verifier live (requires Ollama
+running locally with qwen2.5:7b pulled; adds 0.6–1.5s latency per call).
 
 ## Reproduce
 
@@ -168,7 +229,7 @@ environment variable.
 |------|---------|
 | `ARCHITECTURE.md` | System design, invariants, threat-to-tier mapping |
 | `EVAL.md` | Measurement protocol, all metrics, honest limitations |
-| `DECISIONS.md` | Append-only decision log (D001–D059; D014 unused, numbering skip) |
+| `DECISIONS.md` | Append-only decision log (D001–D069; D014 unused, numbering skip) |
 | `RULES.md` | Enforceable constraints checked by `make check` |
 | `docs/T2_STATE_MACHINE.md` | T2 async state machine detail |
 | `data/GENERATION.md` | Corpus generation parameters |
