@@ -287,3 +287,34 @@
   after one mismatch (Desk Lamp, D043); leakage gates pass;
   category_hierarchy_distance ranks 6th by feature importance. M1 is next
   blocker-free item.
+
+### S3 — FastAPI /check endpoint + local demo UI
+- Category: PRODUCTION-REALISM
+- Verification: CONFIRMED 2026-09-05 this session -- six preset
+  scenarios (legitimate purchase, amount over cap, wrong merchant, cart
+  tampered, brand substitution, post-auth SKU swap) all verified via
+  direct HTTP calls to /check AND via live browser screenshot
+  (DevTools Elements + Console, fresh incognito load, zero real errors).
+  All six verdicts/reason_codes/t1_scores matched expected values exactly,
+  including the post-auth SKU swap case reproducing t1_score=0.228141
+  matching the real hn_post_auth_cart_mutation archetype fixed earlier
+  this session (D064).
+- Decision: ACCEPTED
+- Status: DONE
+- Effort: Built in one session -- src/mandate_guard/api.py (FastAPI,
+  reuses _record_to_t0_args + cascade.check() directly, no divergent
+  contract-construction logic), web/index.html + web/app.js (vanilla,
+  no framework, no build step).
+- Sub-items:
+  - POST /check accepts a flat record dict (same shape as corpus
+    records), enable_t2 flag; returns verdict, reason_code, t0_triggered,
+    t1_score, t2_evidence.
+  - DEMO_TAU=0.220 (full-intent dev tau_star, verified D064/this session).
+  - Malformed-request path returns 422 with clear message, confirmed
+    does not crash the server.
+  - UI: two-column layout, scenario picker auto-populates form and
+    triggers a check immediately, staged T0/T1/T2 trace reveal, prominent
+    verdict + T1 score display, raw JSON disclosure.
+- Notes: Not built because Track 02 requires it -- built because it
+  closes the "is this a real system" question in seconds and supports
+  the pitch video demo. Local-only, not a production endpoint.

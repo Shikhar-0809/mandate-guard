@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>mandate-guard demo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #FAFAF9;
+      --panel: #FFFFFF;
+      --border: #E5E7EB;
+      --border-strong: #D1D5DB;
+      --text: #14151A;
+      --text-muted: #6B7280;
+      --accent: #2B3A67;
+      --accent-hover: #1f2a4d;
+      --accent-soft: #EEF0F6;
+      --block: #B42318;
+      --block-bg: #FEF3F2;
+      --hold: #B54708;
+      --hold-bg: #FFFAEB;
+      --allow: #027A48;
+      --allow-bg: #ECFDF3;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "IBM Plex Sans", system-ui, sans-serif;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .top-bar {
+      border-bottom: 1px solid var(--border);
+      padding: 20px 32px;
+      background: var(--panel);
+    }
+
+    .wordmark {
+      margin: 0;
+      font-family: "Space Grotesk", sans-serif;
+      font-weight: 700;
+      font-size: 20px;
+      color: var(--text);
+      line-height: 1.2;
+    }
+
+    .top-subtitle {
+      margin: 4px 0 0;
+      font-family: "IBM Plex Sans", sans-serif;
+      font-weight: 400;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .main-layout {
+      display: grid;
+      grid-template-columns: 38fr 62fr;
+      min-height: calc(100vh - 73px);
+    }
+
+    .column-left,
+    .column-right {
+      padding: 32px;
+      min-width: 0;
+    }
+
+    .column-right {
+      border-left: 1px solid var(--border);
+    }
+
+    .section-label {
+      margin: 0 0 12px;
+      font-family: "IBM Plex Sans", sans-serif;
+      font-weight: 600;
+      font-size: 13px;
+      letter-spacing: 0.02em;
+      color: var(--text-muted);
+    }
+
+    .section-label + .section-label-spaced {
+      margin-top: 28px;
+    }
+
+    .scenario-list {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 28px;
+    }
+
+    .scenario-row {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-bottom: none;
+      background: var(--panel);
+      font-family: "IBM Plex Sans", sans-serif;
+      font-weight: 500;
+      font-size: 14px;
+      color: var(--text);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .scenario-row:last-child {
+      border-bottom: 1px solid var(--border);
+    }
+
+    .scenario-row:hover {
+      background: var(--accent-soft);
+    }
+
+    .scenario-row.selected {
+      background: var(--accent-soft);
+      border-left: 3px solid var(--accent);
+      padding-left: 9px;
+    }
+
+    .form-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field label {
+      font-family: "IBM Plex Sans", sans-serif;
+      font-weight: 500;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .field input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--panel);
+      color: var(--text);
+      font-size: 14px;
+    }
+
+    .field input.input-data {
+      font-family: "IBM Plex Mono", monospace;
+      font-weight: 400;
+    }
+
+    .field input.input-prose {
+      font-family: "IBM Plex Sans", sans-serif;
+      font-weight: 400;
+    }
+
+    .field input:focus,
+    .scenario-row:focus,
+    .run-check-btn:focus,
+    .toggle-link:focus,
+    .t2-option input:focus {
+      outline: 2px solid var(--accent-soft);
+      border-color: var(--accent);
+    }
+
+    .cart-group {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      padding-top: 4px;
+    }
+
+    .t2-option {
+      margin-bottom: 20px;
+    }
+
+    .t2-option label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: "IBM Plex Sans", sans-serif;
+      font-weight: 500;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .t2-caption {
+      margin: 6px 0 0 24px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .run-check-btn {
+      width: 100%;
+      padding: 12px 16px;
+      border: none;
+      border-radius: 4px;
+      background: var(--accent);
+      color: #fff;
+      font-family: "IBM Plex Sans", sans-serif;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .run-check-btn:hover {
+      background: var(--accent-hover);
+    }
+
+    .result-heading {
+      margin: 0 0 16px;
+    }
+
+    .verdict-band {
+      min-height: 120px;
+      margin-bottom: 24px;
+    }
+
+    .verdict-empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 120px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--panel);
+      color: var(--text-muted);
+      font-size: 14px;
+      text-align: center;
+      padding: 24px;
+    }
+
+    .verdict-result {
+      display: none;
+      border-radius: 4px;
+      padding: 20px 24px;
+    }
+
+    .verdict-result.visible {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .verdict-result.ALLOW { background: var(--allow-bg); }
+    .verdict-result.HOLD { background: var(--hold-bg); }
+    .verdict-result.BLOCK { background: var(--block-bg); }
+    .verdict-result.ERROR { background: var(--block-bg); }
+
+    .verdict-result-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    .verdict-primary {
+      flex: 1;
+      min-width: 160px;
+    }
+
+    .verdict-word {
+      font-family: "Space Grotesk", sans-serif;
+      font-weight: 700;
+      font-size: 40px;
+      line-height: 1.1;
+      margin: 0;
+    }
+
+    .verdict-word.ALLOW { color: var(--allow); }
+    .verdict-word.HOLD { color: var(--hold); }
+    .verdict-word.BLOCK { color: var(--block); }
+    .verdict-word.ERROR { color: var(--block); }
+
+    .reason-code {
+      margin: 8px 0 0;
+      font-family: "IBM Plex Mono", monospace;
+      font-weight: 500;
+      font-size: 14px;
+      color: var(--text);
+    }
+
+    .verdict-stats {
+      display: flex;
+      gap: 32px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+
+    .stat-block {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 100px;
+    }
+
+    .stat-label {
+      font-family: "IBM Plex Sans", sans-serif;
+      font-weight: 500;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .stat-value {
+      font-family: "IBM Plex Mono", monospace;
+      font-weight: 700;
+      font-size: 28px;
+      color: var(--text);
+      line-height: 1.1;
+    }
+
+    .stat-value.muted {
+      font-weight: 400;
+      font-size: 16px;
+      color: var(--text-muted);
+    }
+
+    .stat-value-text {
+      font-family: "IBM Plex Sans", sans-serif;
+      font-weight: 400;
+      font-size: 13px;
+      color: var(--text);
+      max-width: 280px;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    .trace-list {
+      margin-bottom: 20px;
+    }
+
+    .trace-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+      opacity: 0.55;
+      transition: opacity 0.2s ease, color 0.2s ease;
+    }
+
+    .trace-row.active {
+      opacity: 1;
+    }
+
+    .trace-row .tier-label {
+      font-family: "IBM Plex Sans", sans-serif;
+      font-weight: 500;
+      font-size: 14px;
+      color: var(--text-muted);
+      transition: color 0.2s ease;
+    }
+
+    .trace-row.active .tier-label {
+      color: var(--text);
+    }
+
+    .trace-row .tier-status {
+      font-family: "IBM Plex Mono", monospace;
+      font-weight: 400;
+      font-size: 13px;
+      color: var(--text-muted);
+      transition: color 0.2s ease;
+    }
+
+    .trace-row.active .tier-status {
+      color: var(--text);
+    }
+
+    .toggle-link {
+      font-family: "IBM Plex Sans", sans-serif;
+      font-weight: 500;
+      font-size: 13px;
+      color: var(--accent);
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .toggle-link:hover {
+      text-decoration: underline;
+    }
+
+    .raw-json {
+      display: none;
+      margin-top: 10px;
+      padding: 12px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 320px;
+      overflow: auto;
+    }
+
+    .raw-json.open {
+      display: block;
+    }
+
+    @media (max-width: 800px) {
+      .main-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .column-right {
+        border-left: none;
+        border-top: 1px solid var(--border);
+      }
+
+      .column-left,
+      .column-right {
+        padding: 24px 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="top-bar">
+    <h1 class="wordmark">mandate-guard</h1>
+    <p class="top-subtitle">AI agent payment mandate-deviation detector</p>
+  </header>
+
+  <div class="main-layout">
+    <div class="column-left">
+      <h2 class="section-label">Run a check</h2>
+
+      <h3 class="section-label">Scenarios</h3>
+      <div id="scenario-picker" class="scenario-list" role="group" aria-label="Scenario presets"></div>
+
+      <h3 class="section-label section-label-spaced">Transaction</h3>
+      <form class="form-stack" id="transaction-form" onsubmit="return false;">
+        <div class="field">
+          <label for="purchase_intent">purchase_intent</label>
+          <input type="text" id="purchase_intent" name="purchase_intent" class="input-prose">
+        </div>
+        <div class="field">
+          <label for="merchant_id">merchant_id</label>
+          <input type="text" id="merchant_id" name="merchant_id" class="input-data">
+        </div>
+        <div class="field">
+          <label for="mcc">mcc</label>
+          <input type="text" id="mcc" name="mcc" class="input-data">
+        </div>
+
+        <div class="cart-group">
+          <div class="field">
+            <label for="item_sku">sku</label>
+            <input type="text" id="item_sku" name="item_sku" class="input-data">
+          </div>
+          <div class="field">
+            <label for="item_name">name</label>
+            <input type="text" id="item_name" name="item_name" class="input-prose">
+          </div>
+          <div class="field">
+            <label for="item_quantity">quantity</label>
+            <input type="number" id="item_quantity" name="item_quantity" min="1" class="input-data">
+          </div>
+          <div class="field">
+            <label for="item_price">unit_price_minor_units</label>
+            <input type="number" id="item_price" name="item_price" min="0" class="input-data">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="transaction_amount">transaction_amount_minor_units</label>
+          <input type="number" id="transaction_amount" name="transaction_amount" min="0" class="input-data">
+        </div>
+        <div class="field">
+          <label for="scope_merchants">intent_scope_merchants</label>
+          <input type="text" id="scope_merchants" name="scope_merchants" class="input-data" placeholder="comma-separated">
+        </div>
+        <div class="field">
+          <label for="scope_categories">intent_scope_categories</label>
+          <input type="text" id="scope_categories" name="scope_categories" class="input-data" placeholder="comma-separated">
+        </div>
+        <div class="field">
+          <label for="scope_max_amount">intent_scope_max_amount_minor_units</label>
+          <input type="number" id="scope_max_amount" name="scope_max_amount" min="0" class="input-data">
+        </div>
+      </form>
+
+      <div class="t2-option">
+        <label>
+          <input type="checkbox" id="enable-t2">
+          Enable T2 (LLM verifier)
+        </label>
+        <p class="t2-caption">Adds 0.6-1.5s latency, requires Ollama running locally.</p>
+      </div>
+
+      <button type="button" class="run-check-btn" id="run-check-btn">Run check</button>
+    </div>
+
+    <div class="column-right">
+      <h2 class="section-label result-heading">Result</h2>
+
+      <div class="verdict-band" id="verdict-band">
+        <div class="verdict-empty" id="verdict-empty">Run a check to see the result</div>
+        <div class="verdict-result" id="verdict-result">
+          <div class="verdict-result-inner">
+            <div class="verdict-primary">
+              <p class="verdict-word" id="verdict-word"></p>
+              <p class="reason-code" id="reason-code"></p>
+            </div>
+            <div class="verdict-stats">
+              <div class="stat-block" id="t1-stat">
+                <span class="stat-label">T1 score</span>
+                <span class="stat-value" id="t1-stat-value"></span>
+              </div>
+              <div class="stat-block" id="t2-stat" hidden>
+                <span class="stat-label">T2 evidence</span>
+                <span class="stat-value-text" id="t2-stat-value"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="trace-list" id="trace-rows">
+        <div class="trace-row" id="trace-t0">
+          <span class="tier-label">T0: deterministic rules</span>
+          <span class="tier-status" id="status-t0"></span>
+        </div>
+        <div class="trace-row" id="trace-t1">
+          <span class="tier-label">T1: calibrated model</span>
+          <span class="tier-status" id="status-t1"></span>
+        </div>
+        <div class="trace-row" id="trace-t2">
+          <span class="tier-label">T2: LLM verifier</span>
+          <span class="tier-status" id="status-t2"></span>
+        </div>
+      </div>
+
+      <div class="raw-section">
+        <button type="button" class="toggle-link" id="raw-toggle" aria-expanded="false">Raw response</button>
+        <pre class="raw-json" id="raw-json"></pre>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
