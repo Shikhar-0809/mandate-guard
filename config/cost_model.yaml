@@ -1,0 +1,9 @@
+# All values ASSUMPTION unless a citation is noted.
+fp_cost_inr: 320.0       # ASSUMPTION — ticket 2600 * 0.40 non-retry * 0.25 margin + 60 support
+fn_cost_inr: 1470.0      # ASSUMPTION — ticket 2600 * 0.22 unrecoverable + 900 dispute ops
+hold_cost_inr: 45.0      # ASSUMPTION
+attack_prior: 0.008      # ASSUMPTION — stated prior, not measured
+max_hold_rate: 0.05      # ASSUMPTION — see DECISIONS.md D061; order-of-magnitude
+                         # below T2's 0.5% traffic ceiling (ARCHITECTURE.md),
+                         # scaled up ~10x for HOLD's lower per-unit cost.
+                         # No citation available for real ops review capacity.

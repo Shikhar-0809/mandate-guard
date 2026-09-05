@@ -19,7 +19,9 @@ from contracts.verdict import VerdictState
 from mandate_guard.eval import (
     _verify_sha256,
     cascade_verdict_rate,
+    find_cost_optimal_threshold,
     load_sealed_semantic,
+    score_t0_t1,
 )
 from mandate_guard.normalize import normalize_semantic_labels_for_training
 
@@ -140,13 +142,22 @@ def run_semantic_eval(model_dir: Path, project_root: Path) -> dict[str, object]:
     )
     normalized = normalize_semantic_labels_for_training(raw_records)
 
-    # Per D058: find_cost_optimal_threshold degenerates at both raw
-    # counts (tau=0.01) and true prior (tau=1.0) on this corpus - no
-    # interior minimum exists at prior=0.008. Tau fixed via the
-    # FN:FP=1.0 sweep point instead (recall=0.85, 99 FP, 28 FN) -
-    # see D058 for full derivation.
-    TAU_STAR_FIXED = 0.17
-    tau_star = TAU_STAR_FIXED
+    print("Deriving tau_star via find_cost_optimal_threshold (D061)...")
+    corpus_scores = [score_t0_t1(record, model_dir) for record in normalized]
+    # D058/D059 operating point: FN:FP=1.0 (fn_cost=fp_cost=320), not 4.6:1.
+    # max_hold_rate=0.05 per D061 / config/cost_model.yaml (literal; YAML not imported).
+    tau_star, _cost_at_tau_star = find_cost_optimal_threshold(
+        normalized,
+        corpus_scores,
+        fp_cost=320.0,
+        fn_cost=320.0,
+        hold_cost=45.0,
+        max_hold_rate=0.05,
+    )
+    print(
+        f"  tau_star={tau_star:.3f} (derived, not hardcoded; "
+        f"max_hold_rate=0.05, FN:FP=1.0)"
+    )
 
     deviation_records = [
         record for record in normalized if str(record["label"]) == "BLOCK"
@@ -182,7 +193,7 @@ def main() -> None:
 
     print("=== mandate-guard semantic evaluation report ===")
     print()
-    print(f"tau_star:                  {results['tau_star']:.3f}")
+    print(f"tau_star:                  {results['tau_star']:.3f}  (derived via D061, not hardcoded)")
     print(f"deviation_population_n:    {results['deviation_population_n']}")
     print(f"hard_negative_population_n:{results['hard_negative_population_n']}")
     print(f"uncertain_dropped_n:       {results['uncertain_dropped_n']}")

@@ -408,6 +408,27 @@ def compute_metrics(
     }
 
 
+def _cost_partition_at_tau(
+    records: list[dict[str, object]],
+    scores: list[float],
+    tau: float,
+) -> tuple[int, int, int, int]:
+    fp = fn = hold_pos = hold_neg = 0
+    for record, score in zip(records, scores):
+        label = str(record["label"])
+        if score == 0.0:
+            if label == "BLOCK":
+                fn += 1
+        elif score < tau:
+            if label == "BLOCK":
+                hold_pos += 1
+            else:
+                hold_neg += 1
+        elif label == "ALLOW":
+            fp += 1
+    return fp, fn, hold_pos, hold_neg
+
+
 def find_cost_optimal_threshold(
     records: list[dict[str, object]],
     scores: list[float],
@@ -415,35 +436,22 @@ def find_cost_optimal_threshold(
     fn_cost: float = 1470.0,
     hold_cost: float = 45.0,
     prior: float | None = None,
+    max_hold_rate: float | None = None,
 ) -> tuple[float, float]:
-    y_true = [1 if str(record["label"]) == "BLOCK" else 0 for record in records]
     n_pos = sum(1 for record in records if str(record["label"]) == "BLOCK")
     n_neg = sum(1 for record in records if str(record["label"]) == "ALLOW")
     best_tau = 0.0
     best_cost = float("inf")
     for step in range(101):
         tau = step / 100.0
-        preds = [1 if score >= tau else 0 for score in scores]
-        fp = sum(
-            prediction == 1 and label == 0 for prediction, label in zip(preds, y_true)
-        )
-        fn = sum(
-            prediction == 0 and label == 1 for prediction, label in zip(preds, y_true)
-        )
-        hold = sum(1 for s in scores if 0.0 < s < tau)
+        fp, fn, hold_pos, hold_neg = _cost_partition_at_tau(records, scores, tau)
+        hold = hold_pos + hold_neg
+        hold_rate = (hold_pos + hold_neg) / len(records) if records else 0.0
+        if max_hold_rate is not None and hold_rate > max_hold_rate:
+            continue
         if prior is None:
             cost = compute_cost(fp, fn, hold, fp_cost, fn_cost, hold_cost)
         else:
-            hold_pos = sum(
-                1
-                for score, label in zip(scores, y_true)
-                if label == 1 and 0.0 < score < tau
-            )
-            hold_neg = sum(
-                1
-                for score, label in zip(scores, y_true)
-                if label == 0 and 0.0 < score < tau
-            )
             cost = compute_cost(
                 fp,
                 fn,
@@ -460,6 +468,12 @@ def find_cost_optimal_threshold(
         if cost < best_cost or (cost == best_cost and tau > best_tau):
             best_tau = tau
             best_cost = cost
+    if max_hold_rate is not None and best_cost == float("inf"):
+        raise ValueError(
+            f"No tau in [0,1] satisfies max_hold_rate={max_hold_rate} "
+            f"on this corpus (n={len(records)}); every threshold exceeds the "
+            f"stated HOLD capacity. Raise max_hold_rate or accept lower recall."
+        )
     return best_tau, best_cost
 
 
