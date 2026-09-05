@@ -21,14 +21,14 @@ Three-tier cascade, each tier adding a layer of detection:
 | Tier | Mechanism | Runs on | p99 target |
 |------|-----------|---------|------------|
 | T0 | Deterministic mandate constraints | 100% of traffic | ~3 ms |
-| T1 | Calibrated LightGBM, 7 semantic features | 100% of traffic | ~10 ms |
+| T1 | Calibrated LightGBM, 8 semantic features | 100% of traffic | ~10 ms |
 | T2 | LLM semantic verifier (qwen2.5:7b via Ollama) | ≤0.5% of traffic | async |
 
 T0 catches structural violations: amount cap, merchant allowlist, category
 scope, cart hash integrity, delegation monotonicity, mandate ID.
 
 T1 catches semantic violations: brand substitution, scope creep, intent-cart
-mismatch. Trained on intent-populated records only.
+mismatch, category-hierarchy distance. Trained on intent-populated records only.
 
 T2 catches ambiguous semantic cases T1 cannot resolve. Runs asynchronously;
 ambiguity resolves to HOLD, never to a blocking wait. T2 produces evidence
@@ -36,28 +36,65 @@ only — enforcement is always deterministic.
 
 ## Results
 
+Three separate populations, reported separately — not one blended number.
+
+| Population | Recall | Notes |
+|------------|--------|-------|
+| Dev families 1–7, 14–15 (recall_seen) | 1.000 | T0+T1 |
+| Sealed families 8–12, pre-registered (recall_unseen) | 1.000 | T0+T1, τ=1.0 |
+| Sealed family 13, post-hoc challenge, T0+T1 only | 0.000 | T0 passes by design; T1 alone does not catch it |
+| Sealed family 13, post-hoc challenge, T0+T1+T2 | 1.000 | +100pp with T2 enabled |
+
 | Metric | Value |
 |--------|-------|
-| recall_seen (dev families 1–7, 14–15) | 1.000 |
-| recall_unseen (sealed families 8–12, record-level) | 1.000 |
-| recall_unseen (challenge family 13, T0+T1 only) | 0.240 |
-| recall_unseen (challenge family 13, T0+T1+T2) | 1.000 |
-| T1 AUC | 0.999 |
-| T1 precision@prior (0.8% attack rate) | 0.289 |
-| T2 FPR on hard negatives (BLOCK) | 0.49% [Wilson 95% CI: 0.09%–2.70%] |
-| Tests passing | 219 |
+| T1 AUC (holdout) | 0.9646 |
+| T1 precision@prior (0.8% attack rate) | 0.288 |
+| Tests passing | 342 |
 
 **Sealed-set integrity note:** Families 8–12 are pre-registered (SHA-256
 committed before development). Family 13 is a post-hoc challenge set added
-after T2 failure (D008); RULES 19 was violated and is disclosed in EVAL.md
-and DECISIONS.md (D019). Results on families 8–12 and family 13 are reported
-separately throughout.
+after an earlier T2 kill-criterion failure; this protocol deviation is
+disclosed in EVAL.md and DECISIONS.md (D019). Results on families 8–12 and
+family 13 are reported separately throughout, never blended into one number.
 
-**T2 kill criterion:** Pre-registered 2026-08-27. T2 lifted recall_unseen on
-family 13 by +16.67pp (0.240 → 1.000), exceeding the ≥2pp threshold. This
-result is post-hoc (family 13 was created after criterion registration).
-T2 is architecturally justified by the AP2 gap argument; the metric result
-is supporting evidence, honestly bounded.
+## T2: two kill-criterion measurements, one pass and one fail
+
+T2's kill criterion has now been measured twice, independently:
+
+**Family 13 (post-hoc, disclosed):** T2 lifts recall from 0.000 to 1.000 on
+this 25-record, 4-archetype-cycled challenge set — a clear pass, but this
+criterion was not pre-registered before family 13 existed (D008/D020).
+
+**M1 semantic corpus (pre-registered, D053/D057):** a purpose-built 500-record
+corpus with genuine per-record diversity, designed specifically to test
+semantic substitution/ambiguity at real scale. Here T2 **fails** its
+pre-registered kill criterion in both required directions: recall on
+genuine deviations drops from 0.853 to 0.768 (T2 makes recall worse, not
+better), and the false-positive rate on hard negatives rises from 0.133 to
+0.164 (T2 also blocks more legitimate traffic). Full result and derivation
+in D059.
+
+**Read together:** T2's only positive, pre-registered result is a regression.
+Its one favorable number is post-hoc and drawn from a narrow, repetitive
+challenge set. This is reported plainly rather than leading with the
+favorable number and omitting the negative one. `t2_enabled=False` remains
+the default (D008, reaffirmed by D059). T2 ships wired, tested, and
+documented — an architectural bet on the AP2 gap argument, not a metrics win.
+
+## A second honest finding: cost-threshold optimization breaks at realistic priors
+
+While deriving an operating threshold for the M1 corpus, naive cost-optimal
+threshold selection (`argmin_τ FP·₹320 + FN·₹1470 + HOLD·₹45`) produced two
+different degenerate results depending on how the corpus's class balance was
+handled: raw counts drove the threshold to block 97.5% of legitimate traffic;
+correcting for the true 0.8% attack prior drove it the opposite direction,
+missing 98% of real fraud. Neither is a usable operating point — the stated
+4.6:1 FN:FP cost ratio is not large enough to overcome a 124:1 base-rate skew
+at realistic priors, on this corpus's specific error curve. Full derivation
+in D058. This is disclosed as a real, general limitation of single-threshold
+cost optimization at low prevalence — not a defect specific to this corpus,
+and directly relevant to anyone deploying a similar detector at a realistic
+fraud rate.
 
 ## Corpus
 
@@ -67,6 +104,7 @@ is supporting evidence, honestly bounded.
 | Dev hard negatives | 226 | 11 archetypes |
 | Dev attacks | 270 | 1–7, 14–15 |
 | Sealed attacks | 150 | 8–13 |
+| Sealed semantic (M1) | 500 | 10 categories, ALLOW/DEVIATION/UNCERTAIN |
 
 Corpora are fully synthetic. All generation parameters live in
 `data/GENERATION.md` with ASSUMPTION labels where uncited.
@@ -80,7 +118,7 @@ Corpora are fully synthetic. All generation parameters live in
 | amount-threshold | 0.407 | Misses non-amount families |
 | regex injection detector | 0.000 | Wrong task — see EVAL.md §Three-way injection experiment |
 | T0 only | 0.870 | Misses semantic families 13–15 |
-| T0+T1+T2 | 1.000 | This system |
+| T0+T1+T2 | 1.000 | This system, sealed families 8–13 combined |
 
 Beating the regex baseline is not a close win — it is a category mismatch.
 Mandate deviation is a property of (intent, cart, payment) triples. A regex
@@ -98,22 +136,24 @@ python data/generate.py --split dev
 python -m pytest
 ```
 
-To run T2 (optional): install [Ollama](https://ollama.com), pull
-`qwen2.5:7b`, then set `T2_ENABLED=true`.
+To run T2 in evaluation (optional): install Ollama, pull qwen2.5:7b, then run
+`python scripts/run_eval.py --enable-t2`. T2 itself is controlled via
+`T2Config(t2_enabled=...)` in code (default `False` — see D008), not an
+environment variable.
 
 ## Key documents
 
 | File | Purpose |
 |------|---------|
-| ARCHITECTURE.md | System design, invariants, threat-to-tier mapping |
-| EVAL.md | Measurement protocol, all metrics, honest limitations |
-| DECISIONS.md | Append-only decision log (D001–D033) |
-| RULES.md | Enforceable constraints checked by `make check` |
-| docs/T2_STATE_MACHINE.md | T2 async state machine detail |
-| data/GENERATION.md | Corpus generation parameters |
+| `ARCHITECTURE.md` | System design, invariants, threat-to-tier mapping |
+| `EVAL.md` | Measurement protocol, all metrics, honest limitations |
+| `DECISIONS.md` | Append-only decision log (D001–D059; D014 unused, numbering skip) |
+| `RULES.md` | Enforceable constraints checked by `make check` |
+| `docs/T2_STATE_MACHINE.md` | T2 async state machine detail |
+| `data/GENERATION.md` | Corpus generation parameters |
 
 ## Scope and safety
 
-Defense-only. No attack payloads outside `sandbox/`. No evasion analysis.
-No real merchant or bank identifiers in `data/`. The LLM tier produces
-evidence only — enforcement is deterministic.
+Defense-only. No attack payloads outside `sandbox/`. No evasion analysis. No
+real merchant or bank identifiers in `data/`. The LLM tier produces evidence
+only — enforcement is deterministic.

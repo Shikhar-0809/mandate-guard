@@ -626,3 +626,27 @@ def cascade_verdict_rate(
         run_cascade_on_record(record, model_dir, tau, t2_config) for record in records
     ]
     return sum(1 for v in verdicts if v.verdict == target_verdict) / len(records)
+
+
+def recall_by_family(
+    records: list[dict[str, object]],
+    model_dir: Path,
+    tau: float,
+    t2_config: T2Config,
+) -> dict[str, float]:
+    """Recall (BLOCK rate on BLOCK-labeled records) grouped by family."""
+    families: dict[str, list[dict[str, object]]] = {}
+    for record in records:
+        families.setdefault(str(record["family"]), []).append(record)
+    result: dict[str, float] = {}
+    for family, family_records in families.items():
+        block_records = [r for r in family_records if str(r["label"]) == "BLOCK"]
+        if not block_records:
+            result[family] = 0.0
+            continue
+        verdicts = [
+            run_cascade_on_record(r, model_dir, tau, t2_config) for r in block_records
+        ]
+        caught = sum(1 for v in verdicts if v.verdict == VerdictState.BLOCK)
+        result[family] = caught / len(block_records)
+    return result

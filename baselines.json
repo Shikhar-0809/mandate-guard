@@ -6,7 +6,7 @@
   "trained_on_n": 1296,
   "holdout_n": 260,
   "feature_count": 8,
-  "eval_recall_unseen": 0.8333333333333334,
+  "eval_recall_unseen_all_sealed": 0.8333333333333334,
   "baselines_compared": [
     "allow_everything",
     "block_everything",
@@ -39,5 +39,9 @@
   "eval_cascade_recall_seen_full_intent": 1.0,
   "eval_cascade_hold_rate_hard_negatives_full_intent": 0.0,
   "eval_cost_optimizer_total_no_intent": 14020.0,
-  "eval_cost_optimizer_total_full_intent": 34850.0
+  "eval_cost_optimizer_total_full_intent": 34850.0,
+  "eval_recall_unseen_families_8_to_12": 1.0,
+  "eval_recall_family_13_t0_t1": 0.0,
+  "eval_recall_family_13_t2_post_hoc": 1.0,
+  "eval_t2_lift_post_hoc": 1.0
 }
