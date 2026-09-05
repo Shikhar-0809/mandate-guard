@@ -731,3 +731,59 @@ a net improvement.
 Revisit: If a differently-calibrated qwen3 variant or a larger local model
 becomes available under the offline/keyless constraint, re-run this exact
 benchmark script against it for a fair comparison.
+
+## D053 — M1 (independent semantic sealed set) pre-registered
+Date: 2026-09-05
+Approved by: Shikhar (explicit sign-off, not self-approved)
+Context: M1 requires pre-registration of exact record count, category
+list, label scheme, adjudication rule, tau, and T2 kill criterion before
+any corpus generation, per CHANGES.md's M1 spec and standing project
+discipline (RULES 19-style: no tuning on data that will become a sealed
+set). Reviewed and approved as drafted, no edits.
+Choice:
+- Categories: 10, from taxonomy.py post-D044 (Electronics, Groceries,
+  Home Goods, Apparel, Health & Personal Care, Office Supplies,
+  Toys & Games, Pet Supplies, Automotive, Books & Media).
+- Count: 50 records/category x 10 = 500 total. Original vocabulary,
+  aligned to taxonomy.py's exact leaf names from the start.
+- Ambiguous subset: >=50 records overall, target 5/category minimum,
+  spread across categories (fixes hn_semantic_ambiguous's current
+  Wilson-uselessness at n=6).
+- Labels: ALLOW/DEVIATION/UNCERTAIN generated natively, normalized to
+  binary ALLOW/BLOCK via a named function with its own contract test
+  before entering the shared pipeline (DEVIATION->BLOCK, UNCERTAIN
+  excluded from FPR, reported separately). M1's own results file keeps
+  the real 3-way counts unreduced.
+- Adjudication rule: ALLOW iff cart item is (a) within the same taxonomy
+  leaf or an immediate-parent-sibling leaf as stated intent, (b) within
+  intent's stated amount/quantity tolerance, (c) not a top-level category
+  crossing. DEVIATION iff cart item crosses top-level categories, or
+  matches a different leaf under the same parent with no stated
+  substitution rationale. UNCERTAIN iff a human reviewer cannot
+  confidently apply (a)-(c) without more context than the record
+  provides - this bucket is expected to be non-trivial for a semantic
+  corpus.
+- Tau: not pre-selected. Must be derived via find_cost_optimal_threshold/
+  threshold_sweep (post-D048 cost formula) run on this corpus once
+  generated - not carried over from existing dev/sealed tau values.
+- T2 kill criterion: >=5pp recall lift over T0+T1 on this corpus's
+  DEVIATION population, WITH hard-negative FPR increase <2pp. Stricter
+  than family-13's criterion (>=2pp, no FPR constraint) because this
+  corpus mixes ambiguous and clear cases - a lift accompanied by an FPR
+  blowup should not count as a win.
+- Seed: 271 (distinct from dev=42, sealed=137; no special meaning by
+  design).
+- Integrity: SHA-256 committed before any T1 retrain or T2 prompt change.
+  Run exactly once. Results to baselines_sealed_semantic.json, never
+  edited after first write.
+- New infra required: data/sealed_semantic/ + own SHA256SUMS,
+  parameterized loader (existing load_sealed_attacks() doesn't
+  generalize). No make seal-eval exists (Makefile absent, N1 deferred) -
+  "run exactly once" is currently self-enforced discipline, not
+  tooling-guaranteed. Flagged explicitly, not silently assumed safe.
+Rejected: Pre-selecting a fixed tau before the corpus exists - rejected
+as reasoning backwards from a nonexistent scoring distribution.
+Revisit: If generation reveals the adjudication rule produces an
+unworkable UNCERTAIN rate (too high or suspiciously near-zero), stop
+generation and revise the rule before continuing - do not silently
+force records into ALLOW/DEVIATION to hit a target distribution.
