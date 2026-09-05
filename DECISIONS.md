@@ -1240,3 +1240,53 @@ separation fully explain it.
 Revisit: If S2's structural T1 features materially change class
 separation on this corpus, a new tau-optimal point may emerge and the
 comparison would need pre-registering fresh, not reusing this result.
+
+## D067 — Pre-registered narrow addition: held-out precision/PR-AUC/cost never computed on any sealed corpus
+Date: 2026-09-05
+Context: Track 02's bar requires "measured precision and recall on a
+held-out test set" plus honest FP cost. Confirmed this session: recall
+exists on held-out data (data/sealed: 0.8333; M1 sealed_semantic:
+0.8526), but precision, PR-AUC, and FP cost have never been computed on
+ANY held-out corpus in this project -- compute_metrics is never called
+with sealed_records (data/sealed is 100% BLOCK-labeled by design, cannot
+support a meaningful precision measurement -- fp would always be 0,
+making precision trivially 1.0), and never called anywhere in
+run_eval_semantic.py despite the M1 corpus having genuine negative
+examples (200 ALLOW / 190 BLOCK post-normalization) that could support a
+real measurement.
+Choice: Add one additive call to compute_metrics(normalized,
+corpus_scores, tau_star, prior=0.008) in run_semantic_eval, using the
+ALREADY-DERIVED tau_star=0.170 (D064/D066) -- no re-derivation of
+threshold, no new tau selection, purely a new statistic read from
+already-frozen scores at an already-fixed operating point. This is
+narrower than D065's exception: D065 re-ran the cost-optimal threshold
+search itself; this adds a measurement that was never attempted, using
+data and a threshold both already locked. Distinguishing this from
+D053's "run exactly once" concern: no search-until-favorable is possible
+here since tau is fixed before this call runs.
+Rejected: Measuring precision on data/sealed (families 8-13) instead --
+that corpus is 100% attack-labeled by design (a recall-only corpus);
+computing precision there would report a meaningless trivial 1.0, worse
+than not reporting the number at all.
+Revisit: N/A -- this is a one-time addition of a missing measurement,
+not a recurring re-run pattern.
+
+## D068 — Held-out precision/PR-AUC/cost result (D067's addition)
+Date: 2026-09-05
+Context: Per D067's pre-registered narrow addition, compute_metrics was
+called on the M1 sealed_semantic corpus (normalized, 390 records) at the
+already-fixed tau_star=0.170, prior=0.008.
+Choice: Result, reported as-is: held_out_precision_at_prior=0.0137,
+held_out_pr_auc=0.6144, held_out_net_cost_per_10k=4073.5. This is the
+first time precision/PR-AUC/FP-cost have been measured on any held-out
+corpus in this project (prior figures were dev-corpus only). Low
+precision at this prior is expected arithmetic (~0.8% base rate), not a
+detector defect -- consistent with D030's original explanation for the
+analogous dev-corpus number. PR-AUC of 0.61 sits meaningfully above the
+0.50 random baseline but well below the dev corpus's 0.92-0.93, an
+honest generalization gap attributed to T1's lexical (not yet fully
+structural) feature set -- consistent with S2's remaining scope.
+Rejected: N/A -- first measurement, nothing to compare against or reject.
+Revisit: Once S2's remaining structural features (brand_equality,
+sku_equality, etc.) land, re-measure held-out precision/PR-AUC/cost to
+see whether the generalization gap narrows.

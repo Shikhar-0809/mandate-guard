@@ -19,6 +19,7 @@ from contracts.verdict import VerdictState
 from mandate_guard.eval import (
     _verify_sha256,
     cascade_verdict_rate,
+    compute_metrics,
     find_cost_optimal_threshold,
     load_sealed_semantic,
     score_t0_t1,
@@ -159,6 +160,14 @@ def run_semantic_eval(model_dir: Path, project_root: Path) -> dict[str, object]:
         f"two-way FP/FN cost, FN:FP=1.0; see D064)"
     )
 
+    print("Computing held-out precision/PR-AUC/cost (D067)...")
+    held_out_metrics = compute_metrics(normalized, corpus_scores, tau_star, prior=0.008)
+    print(
+        f"  precision_at_prior={held_out_metrics['precision_at_prior']:.4f}, "
+        f"pr_auc={held_out_metrics['pr_auc']:.4f}, "
+        f"net_cost_per_10k={held_out_metrics['net_cost_per_10k']:.1f}"
+    )
+
     deviation_records = [
         record for record in normalized if str(record["label"]) == "BLOCK"
     ]
@@ -176,6 +185,9 @@ def run_semantic_eval(model_dir: Path, project_root: Path) -> dict[str, object]:
         "deviation_population_n": len(deviation_records),
         "hard_negative_population_n": len(hard_negative_records),
         "uncertain_dropped_n": uncertain_dropped_n,
+        "held_out_precision_at_prior": held_out_metrics["precision_at_prior"],
+        "held_out_pr_auc": held_out_metrics["pr_auc"],
+        "held_out_net_cost_per_10k": held_out_metrics["net_cost_per_10k"],
         **kill_metrics,
     }
 
