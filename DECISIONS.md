@@ -419,3 +419,30 @@ Rejected: full cascade-level NO_SEMANTIC_EVIDENCE telemetry — deferred to
 M6 (cascade.py doesn't exist yet); this is a stopgap at the eval.py layer only.
 Revisit: when M6 lands, this shim in score_t1() should be replaced by
 cascade-level None handling per CHANGES.md M3 sub-items.
+
+## D036 — cascade.check() unifies T0→T1→T2 behind Verdict
+Date: 2026-09-05
+Context: run_eval.py duplicated T0/T1 float scoring and a separate T2 gate;
+Verdict pinning fields were never populated; empty-intent policy lived only in
+eval.py score_t1() shim.
+Choice: cascade.check() typed API returns Verdict; empty intent → ALLOW with
+NO_SEMANTIC_EVIDENCE; tau passed as parameter (interim until cost_model.yaml);
+T2 ALLOW suppressed to HOLD (test-enforced); run_eval maps Verdict→float for
+legacy metrics (BLOCK=1.0, ALLOW=0.0, HOLD=t1_score).
+Rejected: score-band T2 gate and Verdict-free eval path — replaced by D010 gate
+in cascade.
+Revisit: Remove tau parameter and eval float shim when S4/cost_model.yaml and
+full three-way metrics land.
+
+## D037 — Cascade validation additive; continuous-score path restored in run_eval
+Date: 2026-09-05
+Context: M6 run_eval replaced score_t0_t1() with _verdict_to_eval_score(), which
+binarized Verdicts before compute_metrics/precision_vs_prevalence, breaking the
+continuous curves EVAL.md requires.
+Choice: Restore original score_t0_t1()/find_cost_optimal_threshold() path
+unchanged for all threshold/curve metrics; add cascade.check() Verdict-counting
+(eval_cascade_*) as a separate additive layer at fixed tau_star.
+Rejected: Using _verdict_to_eval_score for tau_star selection or PR curves —
+destroys score distribution semantics even when cascade.check() is correct.
+Revisit: Replace eval_cascade_* float rates with full three-way metric functions
+when S4/cost_model.yaml lands.

@@ -20,6 +20,9 @@ if str(PROJECT_ROOT) not in sys.path:
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+from contracts import T2Config
+from contracts.verdict import Verdict, VerdictState
+from mandate_guard.cascade import check as cascade_check
 from mandate_guard.eval import (
     BaselineName,
     _record_to_t0_args,
@@ -64,6 +67,28 @@ def _format_metrics_row(name: str, metrics: dict[str, float]) -> str:
         f"{metrics['fpr_hard_negatives']:>6.4f}  "
         f"{metrics['pr_auc']:>6.4f}  "
         f"{metrics['net_cost_per_10k']:>8.1f}"
+    )
+
+
+def _run_cascade_on_record(
+    record: dict[str, object],
+    model_dir: Path,
+    tau: float,
+    t2_config: T2Config,
+) -> Verdict:
+    args = _record_to_t0_args(record)
+    return cascade_check(
+        intent=args["intent"],
+        cart=args["cart"],
+        token=args["token"],
+        transaction_amount=args["transaction_amount"],
+        merchant_id=args["merchant_id"],
+        mcc=args["mcc"],
+        now=args["now"],
+        agent_request_id=str(record.get("record_id", "eval")),
+        model_dir=model_dir,
+        tau=tau,
+        t2_config=t2_config,
     )
 
 
@@ -121,6 +146,36 @@ def main() -> None:
 
     curve = precision_vs_prevalence(dev_records, t1_scores, tau_star)
 
+    t2_off = T2Config(t2_enabled=False)
+    cascade_dev_attack_verdicts = [
+        _run_cascade_on_record(record, args.model_dir, tau_star, t2_off)
+        for record in dev_attack_records
+    ]
+    eval_cascade_recall_seen = sum(
+        1 for v in cascade_dev_attack_verdicts if v.verdict == VerdictState.BLOCK
+    ) / len(dev_attack_records)
+
+    cascade_sealed_verdicts = [
+        _run_cascade_on_record(record, args.model_dir, tau_star, t2_off)
+        for record in sealed_records
+    ]
+    eval_cascade_recall_unseen = sum(
+        1 for v in cascade_sealed_verdicts if v.verdict == VerdictState.BLOCK
+    ) / len(sealed_records)
+
+    hard_negative_records = [
+        record for record in dev_records if str(record["family"]).startswith("hn_")
+    ]
+    cascade_hn_verdicts = [
+        _run_cascade_on_record(record, args.model_dir, tau_star, t2_off)
+        for record in hard_negative_records
+    ]
+    eval_cascade_hold_rate_hard_negatives = sum(
+        1 for v in cascade_hn_verdicts if v.verdict == VerdictState.HOLD
+    ) / len(hard_negative_records)
+
+    eval_cascade_recall_unseen_t2: float | None = None
+
     print("=== mandate-guard evaluation report ===")
     print()
     print(
@@ -144,6 +199,13 @@ def main() -> None:
     print(f"recall_seen  (dev  families 1-7): {recall_seen:.4f}")
     print(f"recall_unseen (sealed families 8-12): {recall_unseen:.4f}")
     print()
+    print("--- Cascade validation (Verdict BLOCK/HOLD rates at τ*) ---")
+    print(f"eval_cascade_recall_seen:              {eval_cascade_recall_seen:.4f}")
+    print(f"eval_cascade_recall_unseen:            {eval_cascade_recall_unseen:.4f}")
+    print(
+        f"eval_cascade_hold_rate_hard_negatives: {eval_cascade_hold_rate_hard_negatives:.4f}"
+    )
+    print()
     print("--- T2 kill criterion ---")
     print(
         "T2 must lift recall_unseen by >=2pp over T0+T1 on dev set to "
@@ -158,6 +220,11 @@ def main() -> None:
     existing: dict[str, object] = {}
     if baselines_path.exists():
         existing = json.loads(baselines_path.read_text(encoding="utf-8"))
+    cascade_updates: dict[str, object] = {
+        "eval_cascade_recall_seen": eval_cascade_recall_seen,
+        "eval_cascade_recall_unseen": eval_cascade_recall_unseen,
+        "eval_cascade_hold_rate_hard_negatives": eval_cascade_hold_rate_hard_negatives,
+    }
     existing.update(
         {
             "eval_tau_star": tau_star,
@@ -169,6 +236,7 @@ def main() -> None:
             "eval_t1_pr_auc": t1_metrics["pr_auc"],
             "eval_t1_net_cost_per_10k": t1_metrics["net_cost_per_10k"],
             "baselines_compared": list(BASELINE_NAMES),
+            **cascade_updates,
         }
     )
     baselines_path.write_text(json.dumps(existing, indent=2), encoding="utf-8")
@@ -179,7 +247,6 @@ def main() -> None:
     curve_path.write_text(json.dumps(curve, indent=2), encoding="utf-8")
 
     if args.enable_t2:
-        from contracts import T2Config
         from mandate_guard.t2 import verify as t2_verify
 
         t2_config = T2Config(t2_enabled=True)
@@ -226,6 +293,15 @@ def main() -> None:
         lift = recall_unseen_t2 - recall_unseen
         criterion_met = lift >= 0.02
 
+        t2_on = T2Config(t2_enabled=True)
+        cascade_sealed_verdicts_t2 = [
+            _run_cascade_on_record(record, args.model_dir, tau_star, t2_on)
+            for record in sealed_records
+        ]
+        eval_cascade_recall_unseen_t2 = sum(
+            1 for v in cascade_sealed_verdicts_t2 if v.verdict == VerdictState.BLOCK
+        ) / len(sealed_records)
+
         print("\n--- T2 evaluation (Ollama: qwen2.5:7b) ---")
         print(f"T2 gate invocations: {t2_invoked}")
         print(f"T2 blocked:          {t2_blocked}")
@@ -233,6 +309,9 @@ def main() -> None:
         print(f"recall_unseen T0+T1+T2:  {recall_unseen_t2:.4f}")
         print(f"Lift:                    {lift:+.4f}")
         print(f"Kill criterion (>=+0.02): {'MET' if criterion_met else 'NOT MET'}")
+        print(
+            f"eval_cascade_recall_unseen_t2: {eval_cascade_recall_unseen_t2:.4f}"
+        )
         if criterion_met:
             print("T2 EARNS ITS PLACE — update T2Config default to enabled.")
         else:
@@ -245,6 +324,7 @@ def main() -> None:
         bl["eval_t2_kill_criterion_met"] = criterion_met
         bl["eval_t2_invocations"] = t2_invoked
         bl["eval_t2_blocked"] = t2_blocked
+        bl["eval_cascade_recall_unseen_t2"] = eval_cascade_recall_unseen_t2
         bl_path.write_text(json.dumps(bl, indent=2), encoding="utf-8")
         print("\nbaselines.json updated with T2 results.")
 

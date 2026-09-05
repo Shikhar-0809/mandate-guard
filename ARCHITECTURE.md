@@ -32,7 +32,7 @@ satisfied, cart manifest hash matches approved snapshot, delegation scope
 monotonicity.
 T0 covers authorization, integrity, and structural delegation violations (expiry, amount, beneficiary, category, cart hash, scope, mandate ID). Behavioral/semantic risk is T1/T2 territory.
 T1 runs on 100% deliberately — censored scores blind drift monitors. Post-ablation (D011, D013): 10 semantic features; T0-derived features removed after leakage audit. t1_auc=0.6622; T2 required for family 13.
-T2 gate: `purchase_intent` populated AND (`amount ≥ X` OR `deviation_type ∈ {SKU_SEMANTIC, BENEFICIARY_IDENTITY}`). Numeric deviation never reaches T2; arithmetic does not need a language model.
+T2 gate: T0 passed AND purchase_intent non-empty AND T1 score < 1.0.
 
 ## Invariants
 1. The LLM produces evidence. It never holds authority. Enforcement is
