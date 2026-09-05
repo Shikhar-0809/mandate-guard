@@ -285,7 +285,11 @@ def score_baseline(name: BaselineName, record: dict[str, object]) -> float:
 
 
 def score_t1(record: dict[str, object], model_dir: Path) -> float:
-    return t1_score(record, model_dir)
+    result = t1_score(record, model_dir)
+    if not result.intent_present:
+        return 0.0
+    assert result.score is not None  # guaranteed by T1Result when intent_present
+    return result.score
 
 
 def score_t0_t1(record: dict[str, object], model_dir: Path) -> float:

@@ -13,7 +13,7 @@ SRC = Path(__file__).resolve().parents[2] / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from contracts import CartItem, CartMandate, IntentMandate, Money, Scope
+from contracts import CartItem, CartMandate, IntentMandate, Money, Scope, T1Result
 from mandate_guard.t1 import _load_model, score, train
 
 _DATA_DEV = Path(__file__).resolve().parents[2] / "data" / "dev"
@@ -117,18 +117,37 @@ def test_baselines_written(tmp_path: Path) -> None:
 
 def test_score_valid_transaction(trained_model_dir: Path) -> None:
     _load_model.cache_clear()
-    prob = score(_make_record(amount_minor_units=1000), trained_model_dir)
-    assert 0.0 <= prob <= 1.0
+    result = score(
+        _make_record(purchase_intent="buy USB cable", amount_minor_units=1000),
+        trained_model_dir,
+    )
+    assert result.intent_present
+    assert 0.0 <= result.score <= 1.0
 
 
 def test_score_attack_transaction(trained_model_dir: Path) -> None:
     _load_model.cache_clear()
-    prob = score(_make_record(amount_minor_units=20000), trained_model_dir)
-    assert 0.0 <= prob <= 1.0
+    result = score(
+        _make_record(purchase_intent="buy USB cable", amount_minor_units=20000),
+        trained_model_dir,
+    )
+    assert result.intent_present
+    assert 0.0 <= result.score <= 1.0
 
 
 def test_score_deterministic(trained_model_dir: Path) -> None:
     _load_model.cache_clear()
-    prob1 = score(_make_record(amount_minor_units=1000), trained_model_dir)
-    prob2 = score(_make_record(amount_minor_units=1000), trained_model_dir)
-    assert prob1 == prob2
+    record = _make_record(purchase_intent="buy USB cable", amount_minor_units=1000)
+    result1 = score(record, trained_model_dir)
+    result2 = score(record, trained_model_dir)
+    assert result1 == result2
+
+
+def test_score_empty_intent_returns_absent(trained_model_dir: Path) -> None:
+    _load_model.cache_clear()
+    result = score(_make_record(purchase_intent=""), trained_model_dir)
+    assert result == T1Result(
+        score=None,
+        intent_present=False,
+        reason="INTENT_ABSENT",
+    )

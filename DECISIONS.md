@@ -407,3 +407,15 @@ Rejected: pytest.mark.skipif(sys.platform=="win32") — hides the failure
 rather than fixing it. The scanner logic is correct; the fix is in the
 test harness only.
 Revisit: If Python fixes the handle inheritance regression on Windows.
+
+## D035 — T1Result contract for empty purchase_intent
+Date: 2026-09-04
+Context: score() returned a bare float even for empty-intent records,
+causing families 8-12 to score a uniform 0.603 model-prior artifact
+instead of reflecting "no semantic evidence."
+Choice: T1Result contract with explicit intent_present flag; score_t1()
+in eval.py treats empty-intent as 0.0 contribution (interim shim).
+Rejected: full cascade-level NO_SEMANTIC_EVIDENCE telemetry — deferred to
+M6 (cascade.py doesn't exist yet); this is a stopgap at the eval.py layer only.
+Revisit: when M6 lands, this shim in score_t1() should be replaced by
+cascade-level None handling per CHANGES.md M3 sub-items.

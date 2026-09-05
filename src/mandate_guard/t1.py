@@ -27,6 +27,7 @@ from contracts import (
     IntentMandate,
     Money,
     Scope,
+    T1Result,
 )
 
 from .features import FEATURE_NAMES, extract_features
@@ -304,12 +305,18 @@ def _load_tfidf(model_dir: Path):
 def score(
     record: dict[str, object],
     model_dir: Path,
-) -> float:
-    """Return calibrated BLOCK probability for a transaction record."""
+) -> T1Result:
+    """Return calibrated BLOCK probability or intent-absent sentinel for a record."""
+    if not record.get("purchase_intent"):
+        return T1Result(
+            score=None,
+            intent_present=False,
+            reason="INTENT_ABSENT",
+        )
     clf = _load_model(model_dir)
     tfidf_vec = _load_tfidf(model_dir)
     features = extract_features(record, tfidf_vectorizer=tfidf_vec)
     x = np.array([features])
     prob = float(clf.predict_proba(x)[0, 1])
     assert 0.0 <= prob <= 1.0
-    return prob
+    return T1Result(score=prob, intent_present=True, reason=None)
