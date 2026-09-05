@@ -1,6 +1,6 @@
 # CHANGES
 
-**Execution order:** M4 → M5 → M3 → M6 → M2 (all done) → S2 → M1 → S4 → S3 →
+**Execution order:** M4 → M5 → M3 → M6 → M2 → S2 (all done) → M1 → S4 → S3 →
 S1 → S6 → S5
 
 ## MUST FIX
@@ -100,13 +100,11 @@ S1 → S6 → S5
   features whenever intent and cart shared no literal token/trigram; verb-
   prefix strip fixes trigram contamination but not the lexical-overlap
   ceiling for category-related but text-disjoint pairs.
-- Decision: PENDING
-- Status: NOT STARTED
+- Decision: ACCEPTED
+- Status: DONE
 - Effort: MEDIUM–HIGH (new feature design + corpus validation + retrain)
-- Notes: **S2 now BLOCKS M1, not the reverse.** M1's independent semantic
-  corpus will hit the identical lexical-overlap ceiling at scale without a
-  real category/similarity feature. An embedding-similarity feature (offline,
-  local, same constraint class as T2) is the currently favored direction
-  over category_hierarchy_distance/taxonomy-based matching, since taxonomy
-  lookup has a similar generalization ceiling to hardcoded vocabulary — final
-  design decision deferred to S2's own plan turn.
+- Notes: Original taxonomy (36 leaves, 4 top-level categories) matched via
+  second TF-IDF vectorizer; cross-validated against M2 product vocabulary
+  after one mismatch (Desk Lamp, D043); leakage gates pass;
+  category_hierarchy_distance ranks 6th by feature importance. M1 is next
+  blocker-free item.

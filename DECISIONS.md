@@ -505,3 +505,31 @@ once real verb diversity is present (4 distinct values). T0 catches these
 families regardless of T1's output; the t1_recall drop (1.0->0.8) reflects
 T1 correctly declining to flag content it has no semantic basis to
 distinguish, not a capability loss.
+
+## D042 — category_hierarchy_distance via original taxonomy (S2)
+Date: 2026-09-05
+Context: M2 showed 15/20 hn_post_auth_cart_mutation records shared identical
+zero-valued lexical overlap features; S2 needed category semantics without new deps.
+Choice: Original project-authored TAXONOMY_LEAVES (36 leaves, 4 top-levels)
+matched via a second TfidfVectorizer; category_hierarchy_distance added as 8th
+feature. Embedding-similarity rejected (sentence-transformers not installed,
+reproduce-time fetch risk). Google Product Taxonomy rejected (redistribution
+terms unresolved for vendoring the raw file).
+Rejected: Ollama /api/embeddings on chat models (500 on qwen2.5:7b); network
+embedding baseline (D022).
+Addendum: category_hierarchy_distance now non-zero on cross-category mutation
+pairs (e.g. BLOCK-208 dist=1.0); calibrated scores still plateau (5/5 BLOCK
+at 0.2634) because same-top-level ALLOW substitutions share mid-range distances.
+Revisit: If taxonomy leaf coverage gaps persist on scaled M1 corpus.
+
+## D043 — Cross-validate M2 vocab against S2 taxonomy (Desk Lamp)
+Date: 2026-09-05
+Context: generate.py _ELECTRONICS_PRODUCTS and taxonomy.py TAXONOMY_LEAVES were
+authored independently; Desk Lamp was electronics in M2 but Home Goods in S2.
+Record -207 (ALLOW same-category substitution: Desk Lamp intent, Webcam cart)
+scored 0.2634 — identical to genuine BLOCK cross-category swaps.
+Choice: Move Desk Lamp leaf to Electronics > Office > Desk Lamp in taxonomy.py
+(generate.py assignment kept; desk lamp is sold under electronics MCC in corpus).
+Rejected: Moving Desk Lamp to groceries or regenerating corpus — only one of 30
+vocab items mismatched; root cause was taxonomy top-level, not generate logic.
+Revisit: Re-audit if either vocabulary expands without paired taxonomy update.

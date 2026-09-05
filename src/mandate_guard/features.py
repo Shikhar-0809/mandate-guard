@@ -28,6 +28,7 @@ FEATURE_NAMES = [
     "intent_specificity",
     "cart_category_match",
     "quantity_mismatch",
+    "category_hierarchy_distance",
 ]
 
 
@@ -77,6 +78,8 @@ def _extract_first_int(text: str) -> int | None:
 def extract_features(
     record: dict[str, Any],
     tfidf_vectorizer=None,
+    taxonomy_vectorizer=None,
+    taxonomy_leaf_matrix=None,
 ) -> list[float]:
     intent: str = str(record.get("purchase_intent") or "")
     cart_items: list = record.get("cart_items") or []
@@ -142,6 +145,30 @@ def extract_features(
     else:
         quantity_mismatch = 0.0
 
+    # 8. category_hierarchy_distance
+    if (
+        taxonomy_vectorizer is not None
+        and taxonomy_leaf_matrix is not None
+        and (intent or cart_text)
+    ):
+        from .taxonomy import best_matching_leaf_index, hierarchy_distance
+
+        intent_leaf = best_matching_leaf_index(
+            intent_overlap_text or intent,
+            taxonomy_vectorizer,
+            taxonomy_leaf_matrix,
+        )
+        cart_leaf = best_matching_leaf_index(
+            cart_text,
+            taxonomy_vectorizer,
+            taxonomy_leaf_matrix,
+        )
+        category_hierarchy_distance = hierarchy_distance(intent_leaf, cart_leaf)
+    else:
+        # Graceful degradation: models without taxonomy_vectorizer.joblib emit 0.0
+        # (no signal) rather than failing at load or score time.
+        category_hierarchy_distance = 0.0
+
     return [
         jaccard,
         trigram_sim,
@@ -150,4 +177,5 @@ def extract_features(
         intent_specificity,
         cart_category_match,
         quantity_mismatch,
+        category_hierarchy_distance,
     ]

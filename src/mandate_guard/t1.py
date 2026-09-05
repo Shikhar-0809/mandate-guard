@@ -31,6 +31,7 @@ from contracts import (
 )
 
 from .features import FEATURE_NAMES, extract_features
+from .taxonomy import build_taxonomy_vectorizer, taxonomy_leaf_matrix
 
 
 @dataclass(frozen=True)
@@ -196,11 +197,19 @@ def train(
     )
     tfidf_vec.fit(tfidf_corpus)
 
+    taxonomy_vec = build_taxonomy_vectorizer()
+    taxonomy_leaves = taxonomy_leaf_matrix(taxonomy_vec)
+
     feature_rows: list[list[float]] = []
     labels: list[float] = []
     for record in records:
         feature_rows.append(
-            extract_features(record, tfidf_vectorizer=tfidf_vec)
+            extract_features(
+                record,
+                tfidf_vectorizer=tfidf_vec,
+                taxonomy_vectorizer=taxonomy_vec,
+                taxonomy_leaf_matrix=taxonomy_leaves,
+            )
         )
         labels.append(1.0 if str(record["label"]) == "BLOCK" else 0.0)
 
@@ -234,6 +243,7 @@ def train(
 
     model_dir.mkdir(parents=True, exist_ok=True)
     joblib.dump(tfidf_vec, model_dir / "tfidf_vectorizer.joblib")
+    joblib.dump(taxonomy_vec, model_dir / "taxonomy_vectorizer.joblib")
     joblib.dump(clf, model_dir / "t1_model.joblib")
     (model_dir / "feature_names.json").write_text(
         json.dumps(list(FEATURE_NAMES)),
@@ -302,6 +312,12 @@ def _load_tfidf(model_dir: Path):
     return joblib.load(tfidf_path) if tfidf_path.exists() else None
 
 
+@lru_cache(maxsize=1)
+def _load_taxonomy(model_dir: Path) -> object | None:
+    taxonomy_path = model_dir / "taxonomy_vectorizer.joblib"
+    return joblib.load(taxonomy_path) if taxonomy_path.exists() else None
+
+
 def score(
     record: dict[str, object],
     model_dir: Path,
@@ -315,7 +331,16 @@ def score(
         )
     clf = _load_model(model_dir)
     tfidf_vec = _load_tfidf(model_dir)
-    features = extract_features(record, tfidf_vectorizer=tfidf_vec)
+    taxonomy_vec = _load_taxonomy(model_dir)
+    taxonomy_leaves = (
+        taxonomy_leaf_matrix(taxonomy_vec) if taxonomy_vec is not None else None
+    )
+    features = extract_features(
+        record,
+        tfidf_vectorizer=tfidf_vec,
+        taxonomy_vectorizer=taxonomy_vec,
+        taxonomy_leaf_matrix=taxonomy_leaves,
+    )
     x = np.array([features])
     prob = float(clf.predict_proba(x)[0, 1])
     assert 0.0 <= prob <= 1.0
