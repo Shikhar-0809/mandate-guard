@@ -29,12 +29,14 @@ from mandate_guard.eval import (
     _record_to_t0_args,
     _verify_sha256,
     compute_metrics,
+    cost_ratio_sensitivity,
     find_cost_optimal_threshold,
     load_sealed_attacks,
     precision_vs_prevalence,
     recall_on_records,
     score_baseline,
     score_t0_t1,
+    threshold_sweep,
 )
 
 BASELINE_NAMES: tuple[BaselineName, ...] = (
@@ -101,15 +103,19 @@ def _compute_dev_eval_metrics(
     dev_records: list[dict[str, object]],
     model_dir: Path,
     prior: float,
+    t1_scores: list[float] | None = None,
 ) -> DevEvalMetrics:
-    t1_scores = [score_t0_t1(record, model_dir) for record in dev_records]
+    if t1_scores is None:
+        t1_scores = [score_t0_t1(record, model_dir) for record in dev_records]
     tau_star, cost_at_tau_star = find_cost_optimal_threshold(dev_records, t1_scores)
     t1_metrics = compute_metrics(dev_records, t1_scores, tau_star, prior=prior)
     dev_attack_records = [
         record for record in dev_records if str(record["label"]) == "BLOCK"
     ]
     dev_attack_scores = [
-        score_t0_t1(record, model_dir) for record in dev_attack_records
+        score
+        for record, score in zip(dev_records, t1_scores)
+        if str(record["label"]) == "BLOCK"
     ]
     recall_seen = recall_on_records(dev_attack_records, dev_attack_scores, tau_star)
     return {
@@ -257,15 +263,24 @@ def main() -> None:
             score_baseline(name, record) for record in dev_records_no_intent
         ]
 
+    t1_scores_no_intent = [
+        score_t0_t1(record, args.model_dir) for record in dev_records_no_intent
+    ]
+    t1_scores_full_intent = [
+        score_t0_t1(record, args.model_dir) for record in dev_records_full_intent
+    ]
+
     dev_metrics_no_intent = _compute_dev_eval_metrics(
         dev_records_no_intent,
         args.model_dir,
         args.prior,
+        t1_scores=t1_scores_no_intent,
     )
     dev_metrics_full_intent = _compute_dev_eval_metrics(
         dev_records_full_intent,
         args.model_dir,
         args.prior,
+        t1_scores=t1_scores_full_intent,
     )
     tau_star = dev_metrics_no_intent["eval_tau_star"]
 
@@ -279,9 +294,6 @@ def main() -> None:
             prior=args.prior,
         )
 
-    t1_scores_no_intent = [
-        score_t0_t1(record, args.model_dir) for record in dev_records_no_intent
-    ]
     t1_metrics_no_intent = compute_metrics(
         dev_records_no_intent,
         t1_scores_no_intent,
@@ -421,6 +433,36 @@ def main() -> None:
     eval_outputs_dir.mkdir(parents=True, exist_ok=True)
     curve_path = eval_outputs_dir / "precision_vs_prevalence.json"
     curve_path.write_text(json.dumps(curve, indent=2), encoding="utf-8")
+    threshold_sweep_path = eval_outputs_dir / "threshold_sweep.json"
+    threshold_sweep_path.write_text(
+        json.dumps(
+            {
+                "no_intent": threshold_sweep(
+                    dev_records_no_intent, t1_scores_no_intent
+                ),
+                "full_intent": threshold_sweep(
+                    dev_records_full_intent, t1_scores_full_intent
+                ),
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    cost_ratio_path = eval_outputs_dir / "cost_ratio_sensitivity.json"
+    cost_ratio_path.write_text(
+        json.dumps(
+            {
+                "no_intent": cost_ratio_sensitivity(
+                    dev_records_no_intent, t1_scores_no_intent
+                ),
+                "full_intent": cost_ratio_sensitivity(
+                    dev_records_full_intent, t1_scores_full_intent
+                ),
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
 
     if args.enable_t2:
         from mandate_guard.t2 import verify as t2_verify

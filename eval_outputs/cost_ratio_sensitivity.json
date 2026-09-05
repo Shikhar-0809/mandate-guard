@@ -1,0 +1,106 @@
+{
+  "no_intent": [
+    {
+      "fn_fp_ratio": 1.0,
+      "fn_cost": 320.0,
+      "fp_cost": 320.0,
+      "tau_star": 1.0,
+      "recall": 0.9818181818181818,
+      "fp_count": 20.0,
+      "fn_count": 5.0,
+      "cost_at_tau_star": 8270.0
+    },
+    {
+      "fn_fp_ratio": 3.0,
+      "fn_cost": 960.0,
+      "fp_cost": 320.0,
+      "tau_star": 1.0,
+      "recall": 0.9818181818181818,
+      "fp_count": 20.0,
+      "fn_count": 5.0,
+      "cost_at_tau_star": 11470.0
+    },
+    {
+      "fn_fp_ratio": 5.0,
+      "fn_cost": 1600.0,
+      "fp_cost": 320.0,
+      "tau_star": 1.0,
+      "recall": 0.9818181818181818,
+      "fp_count": 20.0,
+      "fn_count": 5.0,
+      "cost_at_tau_star": 14670.0
+    },
+    {
+      "fn_fp_ratio": 10.0,
+      "fn_cost": 3200.0,
+      "fp_cost": 320.0,
+      "tau_star": 1.0,
+      "recall": 0.9818181818181818,
+      "fp_count": 20.0,
+      "fn_count": 5.0,
+      "cost_at_tau_star": 22670.0
+    },
+    {
+      "fn_fp_ratio": 4.59375,
+      "fn_cost": 1470.0,
+      "fp_cost": 320.0,
+      "tau_star": 1.0,
+      "recall": 0.9818181818181818,
+      "fp_count": 20.0,
+      "fn_count": 5.0,
+      "cost_at_tau_star": 14020.0
+    }
+  ],
+  "full_intent": [
+    {
+      "fn_fp_ratio": 1.0,
+      "fn_cost": 320.0,
+      "fp_cost": 320.0,
+      "tau_star": 0.22,
+      "recall": 1.0,
+      "fp_count": 22.0,
+      "fn_count": 0.0,
+      "cost_at_tau_star": 34850.0
+    },
+    {
+      "fn_fp_ratio": 3.0,
+      "fn_cost": 960.0,
+      "fp_cost": 320.0,
+      "tau_star": 0.22,
+      "recall": 1.0,
+      "fp_count": 22.0,
+      "fn_count": 0.0,
+      "cost_at_tau_star": 34850.0
+    },
+    {
+      "fn_fp_ratio": 5.0,
+      "fn_cost": 1600.0,
+      "fp_cost": 320.0,
+      "tau_star": 0.22,
+      "recall": 1.0,
+      "fp_count": 22.0,
+      "fn_count": 0.0,
+      "cost_at_tau_star": 34850.0
+    },
+    {
+      "fn_fp_ratio": 10.0,
+      "fn_cost": 3200.0,
+      "fp_cost": 320.0,
+      "tau_star": 0.22,
+      "recall": 1.0,
+      "fp_count": 22.0,
+      "fn_count": 0.0,
+      "cost_at_tau_star": 34850.0
+    },
+    {
+      "fn_fp_ratio": 4.59375,
+      "fn_cost": 1470.0,
+      "fp_cost": 320.0,
+      "tau_star": 0.22,
+      "recall": 1.0,
+      "fp_count": 22.0,
+      "fn_count": 0.0,
+      "cost_at_tau_star": 34850.0
+    }
+  ]
+}

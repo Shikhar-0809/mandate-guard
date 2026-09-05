@@ -15,9 +15,11 @@ import pytest
 from mandate_guard.eval import (
     compute_cost,
     compute_metrics,
+    cost_ratio_sensitivity,
     find_cost_optimal_threshold,
     recall_on_records,
     score_baseline,
+    threshold_sweep,
 )
 
 BASE_NOW = datetime(2026, 8, 1, 12, 0, 0)  # noqa: DTZ001
@@ -136,6 +138,34 @@ def test_compute_metrics_and_optimizer_cost_agree() -> None:
     ) * 10000.0
     assert metrics["net_cost_per_10k"] == pytest.approx(expected_cost_per_10k)
     assert metrics["hold_count"] == hold
+
+
+def test_threshold_sweep_basic() -> None:
+    records = [_make_record("BLOCK", family="attack_family_1") for _ in range(5)] + [
+        _make_record("ALLOW") for _ in range(5)
+    ]
+    scores = [0.9] * 5 + [0.1] * 5
+    rows = threshold_sweep(records, scores)
+    assert len(rows) == 21
+    row_at_05 = next(row for row in rows if row["tau"] == 0.5)
+    assert row_at_05["recall"] == 1.0
+    assert row_at_05["fp_count"] == 0.0
+    assert row_at_05["fn_count"] == 0.0
+    row_at_095 = next(row for row in rows if row["tau"] == 0.95)
+    assert row_at_095["recall"] == 0.0
+    assert row_at_095["fn_count"] == 5.0
+
+
+def test_cost_ratio_sensitivity_basic() -> None:
+    records = [_make_record("BLOCK", family="attack_family_1") for _ in range(5)] + [
+        _make_record("ALLOW") for _ in range(5)
+    ]
+    scores = [0.9] * 5 + [0.1] * 5
+    expected_ratios = [1.0, 3.0, 5.0, 10.0, 1470.0 / 320.0]
+    rows = cost_ratio_sensitivity(records, scores)
+    assert [row["fn_fp_ratio"] for row in rows] == expected_ratios
+    for row in rows:
+        assert 0.1 < row["tau_star"] <= 0.9
 
 
 def test_recall_on_records_threshold_zero() -> None:

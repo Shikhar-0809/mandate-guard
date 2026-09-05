@@ -631,3 +631,24 @@ Note: This also retroactively corrects eval_t1_net_cost_per_10k_full_intent
 as committed in af159e9 and eval_cascade_* commits (2165a1b) - those
 commits' cost fields were computed with the buggy 2-term formula and
 should not be cited as accurate; this entry is the correction of record.
+
+## D049 — B11/B12 threshold and cost-ratio tables moved from hand-authored to generated artifacts
+Date: 2026-09-05
+Context: EVAL.md's B11 (threshold stability) and B12 (cost ratio
+sensitivity) tables were hand-pasted markdown from an earlier corpus
+snapshot, with no committed sweep script producing them. STATUS.md
+correctly listed both as open TODOs while EVAL.md presented them as
+settled fact - a direct contradiction. Recomputing tau=0.65 on the current
+corpus gave recall=0.9818/fp=22/fn=5, nothing like the committed
+recall=1.0/fp=3/fn=0. The old B12 table also mislabeled its base-case
+ratio as "4.6:1" using fn_cost=1472 instead of the exact 1470/320=4.59375.
+Choice: Added threshold_sweep() and cost_ratio_sensitivity() as committed,
+tested functions in eval.py, run automatically by run_eval.py for both
+intent conditions, writing live artifacts to eval_outputs/. EVAL.md now
+points to these artifacts as source of truth rather than hand-copying
+values that will drift silently again.
+Rejected: Manually regenerating and re-pasting a corrected table -
+rejected because it reproduces the exact staleness failure mode, just
+with fresher numbers today and the same silent drift risk going forward.
+Revisit: N/A - the generated-artifact pattern is the fix; no future
+revisit needed unless the sweep functions themselves need new columns.

@@ -376,6 +376,7 @@ def compute_metrics(
     return {
         "precision_at_prior": float(precision_at_prior),
         "recall": float(recall),
+        "fpr_all": float(fpr_all),
         "fpr_hard_negatives": float(fpr_hard_negatives),
         "pr_auc": float(pr_auc),
         "net_cost_per_10k": float(net_cost_per_10k),
@@ -466,3 +467,61 @@ def precision_vs_prevalence(
         )
         prior += step
     return curve
+
+
+def threshold_sweep(
+    records: list[dict[str, object]],
+    scores: list[float],
+    tau_values: list[float] | None = None,
+) -> list[dict[str, float]]:
+    if tau_values is None:
+        tau_values = [step / 100.0 for step in range(0, 101, 5)]
+    rows: list[dict[str, float]] = []
+    for tau in tau_values:
+        metrics = compute_metrics(records, scores, tau)
+        rows.append(
+            {
+                "tau": float(tau),
+                "recall": metrics["recall"],
+                "fpr_all": metrics["fpr_all"],
+                "fpr_hard_negatives": metrics["fpr_hard_negatives"],
+                "fp_count": metrics["fp_count"],
+                "fn_count": metrics["fn_count"],
+                "hold_count": metrics["hold_count"],
+                "net_cost_per_10k": metrics["net_cost_per_10k"],
+            }
+        )
+    return rows
+
+
+def cost_ratio_sensitivity(
+    records: list[dict[str, object]],
+    scores: list[float],
+    fn_fp_ratios: list[float] | None = None,
+    fp_cost: float = 320.0,
+) -> list[dict[str, float]]:
+    if fn_fp_ratios is None:
+        fn_fp_ratios = [1.0, 3.0, 5.0, 10.0, 1470.0 / 320.0]
+    rows: list[dict[str, float]] = []
+    for ratio in fn_fp_ratios:
+        fn_cost = ratio * fp_cost
+        tau_star, cost_at_tau_star = find_cost_optimal_threshold(
+            records,
+            scores,
+            fp_cost=fp_cost,
+            fn_cost=fn_cost,
+        )
+        metrics = compute_metrics(records, scores, tau_star)
+        rows.append(
+            {
+                "fn_fp_ratio": float(ratio),
+                "fn_cost": float(fn_cost),
+                "fp_cost": float(fp_cost),
+                "tau_star": float(tau_star),
+                "recall": metrics["recall"],
+                "fp_count": metrics["fp_count"],
+                "fn_count": metrics["fn_count"],
+                "cost_at_tau_star": float(cost_at_tau_star),
+            }
+        )
+    return rows
