@@ -1,0 +1,13 @@
+{
+  "tau_star": 0.01,
+  "deviation_population_n": 190,
+  "hard_negative_population_n": 226,
+  "uncertain_dropped_n": 110,
+  "recall_t2_off": 1.0,
+  "recall_t2_on": 0.7684210526315789,
+  "recall_lift": -0.2315789473684211,
+  "hn_block_rate_t2_off": 0.20353982300884957,
+  "hn_block_rate_t2_on": 0.16371681415929204,
+  "hn_fpr_delta": -0.03982300884955753,
+  "kill_criterion_met": false
+}

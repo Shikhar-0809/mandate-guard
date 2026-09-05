@@ -947,3 +947,48 @@ figures, or if a HOLD-band threshold design (routing ambiguous scores to
 HOLD rather than a binary BLOCK/ALLOW cut) is built, re-run this
 analysis - a band may resolve what a single threshold structurally
 cannot.
+
+## D059 — M1 T2 kill criterion measurement: T2 fails on both recall and hard-negative FPR
+Date: 2026-09-05
+Approved by: Shikhar (explicit sign-off).
+Context: Per D057's operationalized kill criterion and D058's fixed
+tau=0.17, the real run (baselines_sealed_semantic.json, this commit)
+measured: recall_t2_off=0.8526, recall_t2_on=0.7684
+(recall_lift=-0.0842); hn_block_rate_t2_off=0.1327,
+hn_block_rate_t2_on=0.1637 (hn_fpr_delta=+0.0310). Kill criterion
+required recall_lift>=0.05 AND hn_fpr_delta<0.02. Both conditions fail,
+and fail in the same direction: T2 lowers recall on real deviations AND
+raises false-positive rate on legitimate hard negatives simultaneously -
+not a precision/recall tradeoff, a straightforward regression on both
+axes. This corroborates EVAL.md's existing disclosed limitation ("T2
+HOLD behavior at 7B scale... hn_stockout_substitution and
+hn_semantic_ambiguous... a 7B model at temperature=0.0 cannot reliably
+distinguish these ambiguous cases") at real scale (190+226 records)
+rather than the original 6-record hn_semantic_ambiguous bucket.
+Family-13's earlier +16.67pp T2 lift (D008/D020) was a disclosed
+post-hoc, non-pre-registered result on a 4-archetype-cycled challenge
+set. D059 is the second pre-registered measurement of T2's kill
+criterion (after D008's dev-corpus criterion, which was mathematically
+impossible to fail per T0 solving the corpus entirely) and the first
+where T2 is measured on a corpus genuinely capable of failing it - and
+it fails.
+Choice: T2 does not meet its kill criterion on the M1 corpus.
+t2_enabled remains False by default (unchanged from D008). This result
+stands as-measured; no re-run, no tau adjustment, no second attempt.
+Report plainly in M5's README reframe: T2 is architecturally justified
+by the AP2 gap argument (evidence-only tier, never sole authority) but
+has now failed its kill criterion in every pre-registered measurement
+attempted (original dev corpus - criterion impossible; M1 semantic
+corpus - criterion measurable and failed). Only positive T2 result
+remains family-13's disclosed post-hoc, non-pre-registered +16.67pp.
+Rejected: Adjusting tau, re-running, or selecting a different T2 config
+to find a favorable result - would violate D053's "run exactly once"
+discipline and RULES 16's "improvement beyond tolerance also fails,
+check leakage first" principle in spirit; a result obtained by
+search-until-favorable is not evidence.
+Revisit: If a larger/different T2 model is benchmarked (qwen3:8b
+already rejected per D052) and shows materially different behavior on
+this same frozen corpus, or if S6's confidence-floor recalibration
+(blocked on this measurement) changes T2's effective decision boundary
+in a way worth re-testing against a NEW corpus (not re-running this
+one).
