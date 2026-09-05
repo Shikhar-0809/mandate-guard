@@ -307,6 +307,17 @@ def score_t0_t1(record: dict[str, object], model_dir: Path) -> float:
     return score_t1(record, model_dir)
 
 
+def compute_cost(
+    fp: int,
+    fn: int,
+    hold: int,
+    fp_cost: float = 320.0,
+    fn_cost: float = 1470.0,
+    hold_cost: float = 45.0,
+) -> float:
+    return fp * fp_cost + fn * fn_cost + hold * hold_cost
+
+
 def compute_metrics(
     records: list[dict[str, object]],
     scores: list[float],
@@ -358,7 +369,8 @@ def compute_metrics(
         pr_auc = float(average_precision_score(y_true_arr, np.array(scores)))
 
     total = len(records)
-    cost = fp * 320.0 + fn * 1470.0
+    hold = sum(1 for s in scores if 0.0 < s < threshold)
+    cost = compute_cost(fp, fn, hold)
     net_cost_per_10k = (cost / total) * 10000.0 if total > 0 else 0.0
 
     return {
@@ -371,6 +383,7 @@ def compute_metrics(
         "fn_count": float(fn),
         "tp_count": float(tp),
         "tn_count": float(tn),
+        "hold_count": float(hold),
     }
 
 
@@ -394,7 +407,7 @@ def find_cost_optimal_threshold(
             prediction == 0 and label == 1 for prediction, label in zip(preds, y_true)
         )
         hold = sum(1 for s in scores if 0.0 < s < tau)
-        cost = fp * fp_cost + fn * fn_cost + hold * hold_cost
+        cost = compute_cost(fp, fn, hold, fp_cost, fn_cost, hold_cost)
         if cost < best_cost or (cost == best_cost and tau > best_tau):
             best_tau = tau
             best_cost = cost

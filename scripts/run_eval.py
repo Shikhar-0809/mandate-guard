@@ -56,6 +56,7 @@ IntentMode = Literal["base", "with_intent"]
 
 class DevEvalMetrics(TypedDict):
     eval_tau_star: float
+    eval_cost_optimizer_total: float
     eval_recall_seen: float
     eval_t1_precision_at_prior: float
     eval_t1_recall: float
@@ -102,7 +103,7 @@ def _compute_dev_eval_metrics(
     prior: float,
 ) -> DevEvalMetrics:
     t1_scores = [score_t0_t1(record, model_dir) for record in dev_records]
-    tau_star, _ = find_cost_optimal_threshold(dev_records, t1_scores)
+    tau_star, cost_at_tau_star = find_cost_optimal_threshold(dev_records, t1_scores)
     t1_metrics = compute_metrics(dev_records, t1_scores, tau_star, prior=prior)
     dev_attack_records = [
         record for record in dev_records if str(record["label"]) == "BLOCK"
@@ -113,6 +114,7 @@ def _compute_dev_eval_metrics(
     recall_seen = recall_on_records(dev_attack_records, dev_attack_scores, tau_star)
     return {
         "eval_tau_star": tau_star,
+        "eval_cost_optimizer_total": cost_at_tau_star,
         "eval_recall_seen": recall_seen,
         "eval_t1_precision_at_prior": t1_metrics["precision_at_prior"],
         "eval_t1_recall": t1_metrics["recall"],
@@ -128,6 +130,7 @@ def _suffix_dev_metrics(
 ) -> dict[str, float]:
     return {
         f"eval_tau_star{suffix}": metrics["eval_tau_star"],
+        f"eval_cost_optimizer_total{suffix}": metrics["eval_cost_optimizer_total"],
         f"eval_recall_seen{suffix}": metrics["eval_recall_seen"],
         f"eval_t1_precision_at_prior{suffix}": metrics["eval_t1_precision_at_prior"],
         f"eval_t1_recall{suffix}": metrics["eval_t1_recall"],

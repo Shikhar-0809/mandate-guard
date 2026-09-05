@@ -604,3 +604,30 @@ standing anti-shim principle once the fix was recognized as the same
 pattern already implemented, with no new scope or risk beyond what D046
 already covered.
 Revisit: N/A - closes the gap D046 flagged.
+
+## D048 — compute_metrics and find_cost_optimal_threshold used two disagreeing cost formulas
+Date: 2026-09-05
+Context: compute_metrics computed cost as fp*320+fn*1470 (2-term, no HOLD),
+while find_cost_optimal_threshold used fp*320+fn*1470+hold*45 (3-term) to
+SELECT the operating point, then discarded its own cost value. The 2-term
+result was written to baselines.json as eval_t1_net_cost_per_10k under both
+intent conditions, silently omitting the HOLD cost of the very threshold
+the 3-term optimizer chose. This was most severe at tau_star_full_intent
+=0.22, where 618 records fall in the HOLD band: the committed
+eval_t1_net_cost_per_10k_full_intent=54320.99 understated the true
+per-10k cost of roughly 268904 by about 5x.
+Choice: Extracted a single compute_cost(fp, fn, hold, ...) used by both
+functions. find_cost_optimal_threshold's cost is no longer discarded -
+it is now written to baselines.json directly, so the number reported is
+the same number that selected the threshold.
+Rejected: Patching compute_metrics's formula alone - rejected because it
+would leave two independent implementations of the same arithmetic,
+reproducing the exact class of drift RULES 22/N5 already exist to guard
+against elsewhere in this codebase.
+Revisit: When config/cost_model.yaml (S4) lands, redirect compute_cost's
+default fp_cost/fn_cost/hold_cost to load from there instead of inline
+defaults - this fix does not require S4 to land first.
+Note: This also retroactively corrects eval_t1_net_cost_per_10k_full_intent
+as committed in af159e9 and eval_cascade_* commits (2165a1b) - those
+commits' cost fields were computed with the buggy 2-term formula and
+should not be cited as accurate; this entry is the correction of record.

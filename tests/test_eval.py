@@ -10,7 +10,10 @@ SRC = Path(__file__).resolve().parents[1] / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+import pytest
+
 from mandate_guard.eval import (
+    compute_cost,
     compute_metrics,
     find_cost_optimal_threshold,
     recall_on_records,
@@ -114,6 +117,25 @@ def test_find_cost_optimal_threshold_clean_separation() -> None:
     scores = [0.9] * 5 + [0.1] * 5
     tau, _cost = find_cost_optimal_threshold(records, scores)
     assert 0.1 < tau <= 0.9
+
+
+def test_compute_metrics_and_optimizer_cost_agree() -> None:
+    """Regression guard: compute_metrics and find_cost_optimal_threshold
+    must agree on cost for the same (fp, fn, hold) outcome at the same tau -
+    this is the exact bug fixed in D048 (2-term vs 3-term disagreement)."""
+    records = [_make_record("BLOCK", family="attack_family_1") for _ in range(5)] + [
+        _make_record("ALLOW") for _ in range(10)
+    ]
+    scores = [1.0] * 4 + [0.5] + [0.3] * 5 + [0.0] * 5
+    tau = 0.6
+    metrics = compute_metrics(records, scores, tau)
+    hold = sum(1 for s in scores if 0.0 < s < tau)
+    expected_cost_per_10k = (
+        compute_cost(int(metrics["fp_count"]), int(metrics["fn_count"]), hold)
+        / len(records)
+    ) * 10000.0
+    assert metrics["net_cost_per_10k"] == pytest.approx(expected_cost_per_10k)
+    assert metrics["hold_count"] == hold
 
 
 def test_recall_on_records_threshold_zero() -> None:
