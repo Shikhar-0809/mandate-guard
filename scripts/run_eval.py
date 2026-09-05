@@ -64,6 +64,11 @@ class DevEvalMetrics(TypedDict):
     eval_t1_net_cost_per_10k: float
 
 
+class CascadeDevMetrics(TypedDict):
+    eval_cascade_recall_seen: float
+    eval_cascade_hold_rate_hard_negatives: float
+
+
 def _dev_jsonl_path(
     dev_dir: Path,
     base_filename: str,
@@ -129,6 +134,53 @@ def _suffix_dev_metrics(
         f"eval_t1_fpr_hard_negatives{suffix}": metrics["eval_t1_fpr_hard_negatives"],
         f"eval_t1_pr_auc{suffix}": metrics["eval_t1_pr_auc"],
         f"eval_t1_net_cost_per_10k{suffix}": metrics["eval_t1_net_cost_per_10k"],
+    }
+
+
+def _compute_cascade_dev_metrics(
+    dev_records: list[dict[str, object]],
+    model_dir: Path,
+    tau: float,
+    t2_config: T2Config,
+) -> CascadeDevMetrics:
+    dev_attack_records = [
+        record for record in dev_records if str(record["label"]) == "BLOCK"
+    ]
+    cascade_dev_attack_verdicts = [
+        _run_cascade_on_record(record, model_dir, tau, t2_config)
+        for record in dev_attack_records
+    ]
+    eval_cascade_recall_seen = sum(
+        1 for v in cascade_dev_attack_verdicts if v.verdict == VerdictState.BLOCK
+    ) / len(dev_attack_records)
+
+    hard_negative_records = [
+        record
+        for record in dev_records
+        if str(record["family"]).startswith("hn_")
+    ]
+    cascade_hn_verdicts = [
+        _run_cascade_on_record(record, model_dir, tau, t2_config)
+        for record in hard_negative_records
+    ]
+    eval_cascade_hold_rate_hard_negatives = sum(
+        1 for v in cascade_hn_verdicts if v.verdict == VerdictState.HOLD
+    ) / len(hard_negative_records)
+    return {
+        "eval_cascade_recall_seen": eval_cascade_recall_seen,
+        "eval_cascade_hold_rate_hard_negatives": eval_cascade_hold_rate_hard_negatives,
+    }
+
+
+def _suffix_cascade_dev_metrics(
+    metrics: CascadeDevMetrics,
+    suffix: Literal["_no_intent", "_full_intent"],
+) -> dict[str, float]:
+    return {
+        f"eval_cascade_recall_seen{suffix}": metrics["eval_cascade_recall_seen"],
+        f"eval_cascade_hold_rate_hard_negatives{suffix}": metrics[
+            "eval_cascade_hold_rate_hard_negatives"
+        ],
     }
 
 
@@ -243,17 +295,19 @@ def main() -> None:
         tau_star,
     )
 
-    dev_attack_records = [
-        record for record in dev_records_no_intent if str(record["label"]) == "BLOCK"
-    ]
     t2_off = T2Config(t2_enabled=False)
-    cascade_dev_attack_verdicts = [
-        _run_cascade_on_record(record, args.model_dir, tau_star, t2_off)
-        for record in dev_attack_records
-    ]
-    eval_cascade_recall_seen = sum(
-        1 for v in cascade_dev_attack_verdicts if v.verdict == VerdictState.BLOCK
-    ) / len(dev_attack_records)
+    cascade_metrics_no_intent = _compute_cascade_dev_metrics(
+        dev_records_no_intent,
+        args.model_dir,
+        tau_star,
+        t2_off,
+    )
+    cascade_metrics_full_intent = _compute_cascade_dev_metrics(
+        dev_records_full_intent,
+        args.model_dir,
+        dev_metrics_full_intent["eval_tau_star"],
+        t2_off,
+    )
 
     cascade_sealed_verdicts = [
         _run_cascade_on_record(record, args.model_dir, tau_star, t2_off)
@@ -262,19 +316,6 @@ def main() -> None:
     eval_cascade_recall_unseen = sum(
         1 for v in cascade_sealed_verdicts if v.verdict == VerdictState.BLOCK
     ) / len(sealed_records)
-
-    hard_negative_records = [
-        record
-        for record in dev_records_no_intent
-        if str(record["family"]).startswith("hn_")
-    ]
-    cascade_hn_verdicts = [
-        _run_cascade_on_record(record, args.model_dir, tau_star, t2_off)
-        for record in hard_negative_records
-    ]
-    eval_cascade_hold_rate_hard_negatives = sum(
-        1 for v in cascade_hn_verdicts if v.verdict == VerdictState.HOLD
-    ) / len(hard_negative_records)
 
     eval_cascade_recall_unseen_t2: float | None = None
 
@@ -313,10 +354,22 @@ def main() -> None:
     print(f"recall_unseen (sealed families 8-12): {recall_unseen:.4f}")
     print()
     print("--- Cascade validation (Verdict BLOCK/HOLD rates at τ*) ---")
-    print(f"eval_cascade_recall_seen:              {eval_cascade_recall_seen:.4f}")
+    print(
+        "eval_cascade_recall_seen (no-intent):  "
+        f"{cascade_metrics_no_intent['eval_cascade_recall_seen']:.4f}"
+    )
+    print(
+        "eval_cascade_recall_seen (full-intent): "
+        f"{cascade_metrics_full_intent['eval_cascade_recall_seen']:.4f}"
+    )
     print(f"eval_cascade_recall_unseen:            {eval_cascade_recall_unseen:.4f}")
     print(
-        f"eval_cascade_hold_rate_hard_negatives: {eval_cascade_hold_rate_hard_negatives:.4f}"
+        "eval_cascade_hold_rate_hard_negatives (no-intent):  "
+        f"{cascade_metrics_no_intent['eval_cascade_hold_rate_hard_negatives']:.4f}"
+    )
+    print(
+        "eval_cascade_hold_rate_hard_negatives (full-intent): "
+        f"{cascade_metrics_full_intent['eval_cascade_hold_rate_hard_negatives']:.4f}"
     )
     print()
     print("--- T2 kill criterion ---")
@@ -334,9 +387,9 @@ def main() -> None:
     if baselines_path.exists():
         existing = json.loads(baselines_path.read_text(encoding="utf-8"))
     cascade_updates: dict[str, object] = {
-        "eval_cascade_recall_seen": eval_cascade_recall_seen,
         "eval_cascade_recall_unseen": eval_cascade_recall_unseen,
-        "eval_cascade_hold_rate_hard_negatives": eval_cascade_hold_rate_hard_negatives,
+        **_suffix_cascade_dev_metrics(cascade_metrics_no_intent, "_no_intent"),
+        **_suffix_cascade_dev_metrics(cascade_metrics_full_intent, "_full_intent"),
     }
     for old_key in (
         "eval_tau_star",
@@ -346,6 +399,8 @@ def main() -> None:
         "eval_t1_fpr_hard_negatives",
         "eval_t1_pr_auc",
         "eval_t1_net_cost_per_10k",
+        "eval_cascade_recall_seen",
+        "eval_cascade_hold_rate_hard_negatives",
     ):
         existing.pop(old_key, None)
     existing.update(

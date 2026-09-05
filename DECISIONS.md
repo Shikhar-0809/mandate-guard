@@ -589,3 +589,18 @@ no-intent path for benign/HN, replacing one blind spot with another
 rather than disclosing what eval actually measures.
 Revisit: If M1's independent semantic sealed set adopts a different intent-
 population convention, confirm this dual-reporting pattern still applies.
+
+## D047 — Cascade-validation metrics extended to full-intent/no-intent split
+Date: 2026-09-05
+Context: D046 split headline dev metrics into full-intent/no-intent
+conditions but explicitly left eval_cascade_* fields on the no-intent-only
+path, flagging it as a known asymmetry rather than fixing it in that diff.
+Choice: Extended the identical dual-condition pattern to
+eval_cascade_recall_seen and eval_cascade_hold_rate_hard_negatives. Same
+reasoning as D046 applies identically here - no new tradeoff to weigh.
+eval_cascade_recall_unseen stays single-pass (sealed set, no sidecar exists).
+Rejected: Leaving the asymmetry caveated rather than fixed - rejected per
+standing anti-shim principle once the fix was recognized as the same
+pattern already implemented, with no new scope or risk beyond what D046
+already covered.
+Revisit: N/A - closes the gap D046 flagged.

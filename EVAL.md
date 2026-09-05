@@ -49,8 +49,11 @@ intent-present traffic); **no-intent** (`*_no_intent` fields) loads base
 This replaces a previously undisclosed asymmetry: benign and hard-negative
 records were silently evaluated no-intent while attack families 1–7/14–15
 were silently evaluated full-intent because those families bake
-`purchase_intent` into the base file at generation time. Sealed metrics
-(`eval_recall_unseen`) are a single pass — no `_with_intent` sidecar exists.
+`purchase_intent` into the base file at generation time. Cascade-validation
+metrics (`eval_cascade_recall_seen`, `eval_cascade_hold_rate_hard_negatives`)
+follow the same `_no_intent` / `_full_intent` split. Sealed metrics
+(`eval_recall_unseen`, `eval_cascade_recall_unseen`) are a single pass — no
+`_with_intent` sidecar exists.
 
 `recall_unseen` is reported at two granularities:
 - **Family-level**: fraction of unseen attack families where at least one

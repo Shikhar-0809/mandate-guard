@@ -400,6 +400,8 @@ _run_eval = importlib.util.module_from_spec(_RUN_EVAL_SPEC)
 sys.modules[_RUN_EVAL_SPEC.name] = _run_eval
 _RUN_EVAL_SPEC.loader.exec_module(_run_eval)
 _load_dev = _run_eval._load_dev
+_compute_cascade_dev_metrics = _run_eval._compute_cascade_dev_metrics
+_compute_dev_eval_metrics = _run_eval._compute_dev_eval_metrics
 
 
 def _write_sha256sums(directory: Path, filenames: list[str]) -> None:
@@ -445,3 +447,50 @@ def test_load_dev_intent_modes(tmp_path: Path) -> None:
     assert full_intent_a["purchase_intent"] == "buy Widget"
     assert no_intent_b["purchase_intent"] == attack_intent
     assert full_intent_b["purchase_intent"] == attack_intent
+
+
+def test_cascade_dev_metrics_use_both_intent_loaders() -> None:
+    from contracts import T2Config
+
+    model_dir = PROJECT_ROOT / "models"
+    t2_off = T2Config(t2_enabled=False)
+    no_intent = _load_dev(DATA_DEV, intent_mode="base")
+    full_intent = _load_dev(DATA_DEV, intent_mode="with_intent")
+
+    for record_id_suffix in ("200", "204", "208", "212", "216"):
+        suffix = f"hn_post_auth_cart_mutation-{record_id_suffix}"
+        base_record = next(
+            record for record in no_intent if str(record["record_id"]).endswith(suffix)
+        )
+        full_record = next(
+            record
+            for record in full_intent
+            if str(record["record_id"]).endswith(suffix)
+        )
+        assert base_record["purchase_intent"] == ""
+        assert full_record["purchase_intent"] != ""
+
+    dev_metrics_no_intent = _compute_dev_eval_metrics(no_intent, model_dir, 0.008)
+    dev_metrics_full_intent = _compute_dev_eval_metrics(full_intent, model_dir, 0.008)
+
+    cascade_no_intent = _compute_cascade_dev_metrics(
+        no_intent,
+        model_dir,
+        dev_metrics_no_intent["eval_tau_star"],
+        t2_off,
+    )
+    cascade_full_intent = _compute_cascade_dev_metrics(
+        full_intent,
+        model_dir,
+        dev_metrics_full_intent["eval_tau_star"],
+        t2_off,
+    )
+
+    assert cascade_no_intent["eval_cascade_recall_seen"] == pytest.approx(
+        0.9818181818181818
+    )
+    assert cascade_full_intent["eval_cascade_recall_seen"] == 1.0
+    assert (
+        cascade_no_intent["eval_cascade_recall_seen"]
+        < cascade_full_intent["eval_cascade_recall_seen"]
+    )

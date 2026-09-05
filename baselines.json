@@ -19,9 +19,7 @@
   "eval_t2_kill_criterion_met": true,
   "eval_t2_invocations": 25,
   "eval_t2_blocked": 25,
-  "eval_cascade_recall_seen": 0.9818181818181818,
   "eval_cascade_recall_unseen": 0.8333333333333334,
-  "eval_cascade_hold_rate_hard_negatives": 0.0,
   "eval_tau_star_no_intent": 1.0,
   "eval_recall_seen_no_intent": 0.9818181818181818,
   "eval_t1_precision_at_prior_no_intent": 0.28785489782492923,
@@ -35,5 +33,9 @@
   "eval_t1_recall_full_intent": 1.0,
   "eval_t1_fpr_hard_negatives_full_intent": 0.09954751131221719,
   "eval_t1_pr_auc_full_intent": 0.9309415999071171,
-  "eval_t1_net_cost_per_10k_full_intent": 54320.98765432099
+  "eval_t1_net_cost_per_10k_full_intent": 54320.98765432099,
+  "eval_cascade_recall_seen_no_intent": 0.9818181818181818,
+  "eval_cascade_hold_rate_hard_negatives_no_intent": 0.0,
+  "eval_cascade_recall_seen_full_intent": 1.0,
+  "eval_cascade_hold_rate_hard_negatives_full_intent": 0.0
 }
