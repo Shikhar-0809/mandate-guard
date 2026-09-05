@@ -315,8 +315,28 @@ def compute_cost(
     fp_cost: float = 320.0,
     fn_cost: float = 1470.0,
     hold_cost: float = 45.0,
+    n_pos: int | None = None,
+    n_neg: int | None = None,
+    hold_pos: int | None = None,
+    hold_neg: int | None = None,
+    prior: float | None = None,
 ) -> float:
-    return fp * fp_cost + fn * fn_cost + hold * hold_cost
+    if prior is None:
+        return fp * fp_cost + fn * fn_cost + hold * hold_cost
+
+    if n_pos is None or n_neg is None or hold_pos is None or hold_neg is None:
+        raise ValueError(
+            "n_pos, n_neg, hold_pos, and hold_neg are required when prior is set"
+        )
+
+    fn_rate = fn / n_pos if n_pos > 0 else 0.0
+    fp_rate = fp / n_neg if n_neg > 0 else 0.0
+    hold_rate_pos = hold_pos / n_pos if n_pos > 0 else 0.0
+    hold_rate_neg = hold_neg / n_neg if n_neg > 0 else 0.0
+    weighted_fn = prior * fn_rate
+    weighted_fp = (1.0 - prior) * fp_rate
+    weighted_hold = prior * hold_rate_pos + (1.0 - prior) * hold_rate_neg
+    return weighted_fn * fn_cost + weighted_fp * fp_cost + weighted_hold * hold_cost
 
 
 def compute_metrics(
@@ -394,8 +414,11 @@ def find_cost_optimal_threshold(
     fp_cost: float = 320.0,
     fn_cost: float = 1470.0,
     hold_cost: float = 45.0,
+    prior: float | None = None,
 ) -> tuple[float, float]:
     y_true = [1 if str(record["label"]) == "BLOCK" else 0 for record in records]
+    n_pos = sum(1 for record in records if str(record["label"]) == "BLOCK")
+    n_neg = sum(1 for record in records if str(record["label"]) == "ALLOW")
     best_tau = 0.0
     best_cost = float("inf")
     for step in range(101):
@@ -408,7 +431,32 @@ def find_cost_optimal_threshold(
             prediction == 0 and label == 1 for prediction, label in zip(preds, y_true)
         )
         hold = sum(1 for s in scores if 0.0 < s < tau)
-        cost = compute_cost(fp, fn, hold, fp_cost, fn_cost, hold_cost)
+        if prior is None:
+            cost = compute_cost(fp, fn, hold, fp_cost, fn_cost, hold_cost)
+        else:
+            hold_pos = sum(
+                1
+                for score, label in zip(scores, y_true)
+                if label == 1 and 0.0 < score < tau
+            )
+            hold_neg = sum(
+                1
+                for score, label in zip(scores, y_true)
+                if label == 0 and 0.0 < score < tau
+            )
+            cost = compute_cost(
+                fp,
+                fn,
+                hold,
+                fp_cost,
+                fn_cost,
+                hold_cost,
+                n_pos=n_pos,
+                n_neg=n_neg,
+                hold_pos=hold_pos,
+                hold_neg=hold_neg,
+                prior=prior,
+            )
         if cost < best_cost or (cost == best_cost and tau > best_tau):
             best_tau = tau
             best_cost = cost

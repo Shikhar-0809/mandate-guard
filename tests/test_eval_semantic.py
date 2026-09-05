@@ -18,7 +18,11 @@ if str(SRC) not in sys.path:
 
 from contracts import T2Config
 from contracts.verdict import Verdict, VerdictState
-from mandate_guard.eval import cascade_verdict_rate
+from mandate_guard.eval import (
+    cascade_verdict_rate,
+    compute_cost,
+    find_cost_optimal_threshold,
+)
 from mandate_guard.normalize import normalize_semantic_labels_for_training
 
 _RUN_EVAL_SEMANTIC_SPEC = importlib.util.spec_from_file_location(
@@ -153,3 +157,77 @@ def test_deviation_population_matches_original_deviation_records() -> None:
     }
 
     assert deviation_population_ids == original_deviation_ids
+
+
+def test_compute_cost_prior_none_matches_existing_raw_behavior() -> None:
+    raw = compute_cost(2, 3, 4)
+    explicit_none = compute_cost(2, 3, 4, prior=None)
+    assert raw == explicit_none
+    assert raw == 2 * 320.0 + 3 * 1470.0 + 4 * 45.0
+
+
+def test_compute_cost_with_prior_reweights_by_class_rate() -> None:
+    n_pos = 10
+    n_neg = 10
+    fp = 2
+    fn = 1
+    hold_pos = 2
+    hold_neg = 4
+    prior = 0.1
+    fn_rate = fn / n_pos
+    fp_rate = fp / n_neg
+    hold_rate_pos = hold_pos / n_pos
+    hold_rate_neg = hold_neg / n_neg
+    weighted_fn = prior * fn_rate
+    weighted_fp = (1.0 - prior) * fp_rate
+    weighted_hold = prior * hold_rate_pos + (1.0 - prior) * hold_rate_neg
+    expected = weighted_fn * 1470.0 + weighted_fp * 320.0 + weighted_hold * 45.0
+
+    actual = compute_cost(
+        fp,
+        fn,
+        hold_pos + hold_neg,
+        n_pos=n_pos,
+        n_neg=n_neg,
+        hold_pos=hold_pos,
+        hold_neg=hold_neg,
+        prior=prior,
+    )
+    assert actual == pytest.approx(expected)
+
+
+def test_find_cost_optimal_threshold_prior_none_matches_current_behavior() -> None:
+    records: list[dict[str, object]] = [
+        {"label": "BLOCK"},
+        {"label": "BLOCK"},
+        {"label": "ALLOW"},
+        {"label": "ALLOW"},
+    ]
+    scores = [0.9, 0.2, 0.1, 0.8]
+
+    tau_default, cost_default = find_cost_optimal_threshold(records, scores)
+    tau_explicit, cost_explicit = find_cost_optimal_threshold(
+        records, scores, prior=None
+    )
+
+    assert tau_default == tau_explicit
+    assert cost_default == cost_explicit
+
+
+def test_find_cost_optimal_threshold_with_prior_avoids_degenerate_tau() -> None:
+    # Balanced overlap: without prior, raw FN cost drives tau to ~0.01 (block
+    # almost everything); with low prior, FP/hold rates dominate → much higher tau.
+    n_class = 10
+    block_scores = [0.015 + index * 0.002 for index in range(n_class)]
+    allow_scores = [0.02 + index * 0.015 for index in range(n_class)]
+    scores = block_scores + allow_scores
+    records: list[dict[str, object]] = [{"label": "BLOCK"} for _ in block_scores] + [
+        {"label": "ALLOW"} for _ in allow_scores
+    ]
+
+    tau_no_prior, _ = find_cost_optimal_threshold(records, scores)
+    tau_with_prior, _ = find_cost_optimal_threshold(records, scores, prior=0.05)
+
+    assert tau_no_prior <= 0.02
+    assert tau_with_prior >= 0.10
+    assert tau_with_prior > tau_no_prior
