@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import json
 import random
+import re
 import sys
 import uuid
 from dataclasses import dataclass
@@ -1166,6 +1167,94 @@ _CATEGORY_COMPOSITION: tuple[
     ("cross_top", None, None, 10),
 )
 
+# Leaf product names (lowercased) that stay unchanged when intent_qty != 1.
+# Already-plural compounds: earbuds, headphones, boots, sneakers, sandals,
+# jeans, shorts, noodles, bars, beans, sheets, capsules, bandages, wipes,
+# notes, clips, blocks, cards, mats, blades, vitamins.
+# Mass-noun / uncountable product names: oils, rice, butters, water, milk,
+# paper, pet food, soap, trail/dried-fruit mix.
+_INVARIANT_PLURAL_PHRASES: frozenset[str] = frozenset(
+    {
+        "wireless earbuds",
+        "headphones",
+        "boots",
+        "sneakers",
+        "sandals",
+        "jeans",
+        "shorts",
+        "rice noodles",
+        "granola bars",
+        "coffee beans",
+        "bed sheets",
+        "fish oil capsules",
+        "adhesive bandages",
+        "antiseptic wipes",
+        "sticky notes",
+        "binder clips",
+        "building blocks",
+        "flash cards",
+        "floor mats",
+        "windshield wiper blades",
+        "pet vitamins",
+        "olive oil",
+        "brown rice",
+        "almond butter",
+        "peanut butter",
+        "sparkling water",
+        "oat milk",
+        "printer paper",
+        "dry dog food",
+        "wet cat food",
+        "motor oil",
+        "car wash soap",
+        "trail mix",
+        "dried fruit mix",
+    }
+)
+
+# Irregular last-token plurals found in TAXONOMY_LEAVES (129-leaf scan).
+_IRREGULAR_PLURALS: dict[str, str] = {
+    "mouse": "mice",
+    "stylus": "styluses",
+    "scarf": "scarves",
+}
+
+_INTENT_QTY_PURCHASE_INTENT_RE = re.compile(
+    r"^(purchase|buy|order|get) (\d+) (.+)$"
+)
+
+
+def _pluralize_token(word: str) -> str:
+    irregular = _IRREGULAR_PLURALS.get(word)
+    if irregular is not None:
+        return irregular
+    if word.endswith(("s", "x", "z", "ch", "sh")):
+        return f"{word}es"
+    if len(word) >= 2 and word.endswith("y") and word[-2] not in "aeiou":
+        return f"{word[:-1]}ies"
+    return f"{word}s"
+
+
+def pluralize(word: str) -> str:
+    """Pluralize a lowercased leaf product name for purchase_intent qty text."""
+    phrase = word.strip()
+    if phrase in _INVARIANT_PLURAL_PHRASES:
+        return phrase
+    parts = phrase.split()
+    if not parts:
+        return phrase
+    if len(parts) == 1:
+        return _pluralize_token(parts[0])
+    return " ".join([*parts[:-1], _pluralize_token(parts[-1])])
+
+
+def _pluralize_purchase_intent(purchase_intent: str) -> str:
+    match = _INTENT_QTY_PURCHASE_INTENT_RE.match(purchase_intent)
+    if match is None:
+        return purchase_intent
+    verb, qty, leaf_product_name = match.groups()
+    return f"{verb} {qty} {pluralize(leaf_product_name)}"
+
 
 def _build_leaf_base_price_table() -> dict[str, int]:
     from mandate_guard.taxonomy import TAXONOMY_LEAVES
@@ -1329,20 +1418,27 @@ def generate_semantic_corpus(
                 rationale = (
                     rationale_present if rationale_present is not None else False
                 )
-                records.append(
-                    build_semantic_record(
-                        rng,
-                        index,
-                        category,
-                        intent_leaf,
-                        cart_leaf,
-                        amount_ratio,
-                        quantity_ratio,
-                        rationale,
-                        now,
-                        base_unit_price_minor_units=LEAF_BASE_PRICE[intent_leaf],
-                    )
+                # Deliberately anchored to intent_leaf, not cart_leaf: a cross-category
+                # substitute priced 'normally' for ITS OWN category would hide the
+                # amount-deviation signal this corpus needs to test. Visually implausible
+                # price/product pairs in DEVIATION/UNCERTAIN records are intentional, not
+                # a bug.
+                record = build_semantic_record(
+                    rng,
+                    index,
+                    category,
+                    intent_leaf,
+                    cart_leaf,
+                    amount_ratio,
+                    quantity_ratio,
+                    rationale,
+                    now,
+                    base_unit_price_minor_units=LEAF_BASE_PRICE[intent_leaf],
                 )
+                record["purchase_intent"] = _pluralize_purchase_intent(
+                    str(record["purchase_intent"])
+                )
+                records.append(record)
                 index += 1
     return records
 
