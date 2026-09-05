@@ -90,6 +90,62 @@ S1 → S6 → S5
 - Notes: Undermines the reproducibility guarantee GENERATION.md commits
   to. Found as a side effect of M2, not something M2 should fix inline.
 
+### M1 — Independent semantic sealed set
+- Category: REAL EVAL FIX
+- Verification: N/A (creates new artifacts; nothing to verify pre-work)
+- Decision: PENDING
+- Status: NOT STARTED
+- Effort: HIGH (5-10 days)
+- Blocks: S1 (simulator measures on new set), S6 (T2 calibration on new
+  set), S5 (pitch needs independent-set numbers)
+- Blocked on: S2 (done - category-semantic feature required before this
+  corpus is meaningful)
+- Sub-items:
+  - 10 categories, ~50 items/category (500 total), ORIGINAL vocabulary -
+    NOT Amazon Berkeley Objects or any external dataset (rejected: no
+    precedent in this repo for external fetch-at-generation-time;
+    contradicts D002/D022/D042's offline/keyless posture). Vocabulary
+    built to align with taxonomy.py's category names from the start, not
+    cross-checked after the fact.
+  - Labels: ALLOW / DEVIATION / UNCERTAIN. Schema stays binary
+    (ALLOW/BLOCK) project-wide - a normalization layer handles the
+    3-way-to-2-way boundary, per the 4 conditions below. This is a
+    deliberate design boundary, not a workaround:
+    1. New function normalize_semantic_labels_for_training(records) in
+       src/mandate_guard/ (not a throwaway script) - DEVIATION->BLOCK,
+       ALLOW->ALLOW, UNCERTAIN dropped before reaching t1.train() /
+       compute_metrics() / any shared pipeline call.
+    2. Its own contract test: no UNCERTAIN record survives normalization;
+       DEVIATION->BLOCK is deterministic.
+    3. M1's own results file (baselines_sealed_semantic.json) reports
+       real 3-way outcome counts - never reduced at the reporting layer.
+    4. DECISIONS.md entry stating this plainly as a deliberate boundary
+       (shared pipeline is mathematically binary by design), not a
+       workaround.
+  - New infrastructure (nothing generalizes as-is per recon):
+    - data/sealed_semantic/ + its own SHA256SUMS, separate from
+      data/sealed/ (existing sealed set stays frozen, untouched).
+    - New --split sealed_semantic path in data/generate.py, or a separate
+      generator script (decide at plan-turn time).
+    - New load_sealed_semantic() in eval.py, parameterized rather than
+      hardcoded like load_sealed_attacks().
+    - New integrity test(s) in test_corpus.py, separate from
+      test_sealed_family_coverage (families 8-13, must not be touched).
+    - make seal-eval / evaluated_count do not exist yet (no Makefile at
+      all, confirmed) - M1 either builds a minimal real version or
+      explicitly defers it as its own tracked item.
+  - Pre-registration BEFORE any corpus generation, matching existing
+    sealed-set protocol spirit: DECISIONS.md entry committing exact
+    record count, category list, label scheme, adjudication rule text,
+    tau, and the T2 kill criterion for this corpus specifically (needs
+    explicit sign-off as a real pre-registered number before generation,
+    not asserted unilaterally). SHA-256 committed at freeze, "opened
+    once."
+- Notes: This spec was previously held only in Claude's session memory,
+  never actually committed to CHANGES.md - this entry is the first time
+  it exists as real, version-controlled project history. Prior references
+  to "M1's spec" before this commit should be treated as unreliable.
+
 ## SHOULD FIX
 
 ### S2 — Category-semantic feature for T1 (blocks M1)
