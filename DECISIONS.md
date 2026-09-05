@@ -849,3 +849,60 @@ Revisit: If real generation shows 22% UNCERTAIN is unworkable per D053's
 own revisit trigger, or if the sibling/singleton exclusion produces
 skewed per-category composition, reconsider the fixed counts above
 before touching the adjudication branch structure itself.
+
+## D056 — Binary reduction of semantic labels is a pipeline-compatibility boundary, not a workaround
+Date: 2026-09-05
+Approved by: Shikhar (explicit delegation - "do whatever's best, real
+fixes only, not band-aids" - 2026-09-05), drafted by Claude.
+Context: Shared pipeline (t1.train, compute_metrics, cascade.check) is
+mathematically binary (BLOCK/ALLOW) by design. M1's corpus generates a
+native 3-way label (ALLOW/DEVIATION/UNCERTAIN) because the underlying
+question - is this substitution legitimate - is genuinely 3-valued.
+Choice: normalize_semantic_labels_for_training() performs
+DEVIATION->BLOCK, UNCERTAIN-dropped, ALLOW->ALLOW before any record
+reaches shared pipeline code. This is a stated design boundary: the
+pipeline's binary contract is not relaxed to accommodate UNCERTAIN;
+instead the corpus's own results file (baselines_sealed_semantic.json)
+reports real 3-way counts unreduced.
+Rejected: Extending Verdict/label schema project-wide to 3-way - would
+touch T0/T1/T2/cascade contracts for a distinction only this one
+corpus's generation process needs; existing HOLD verdict already carries
+the "genuinely ambiguous" semantics operationally.
+Revisit: If a second corpus or production signal needs native 3-way
+labels reaching the shared pipeline itself.
+
+## D057 — M1 T2 kill criterion operationalized: BLOCK-only FPR, measured against existing hard negatives
+Date: 2026-09-05
+Approved by: Shikhar (explicit delegation - "do whatever's best, real
+fixes only, not band-aids" - 2026-09-05), drafted by Claude.
+Context: D053's kill criterion ("hard-negative FPR increase <2pp") was
+underspecified on two points: which hard-negative population, and
+whether a cascade HOLD verdict counts toward FPR. Confirmed via recon
+that compute_metrics()'s fpr_hard_negatives already defines FPR as
+BLOCK-equivalent only (predictions = score>=threshold), never folding in
+HOLD; and that _compute_cascade_dev_metrics in scripts/run_eval.py
+already follows the same convention at cascade level (recall counts only
+VerdictState.BLOCK, HOLD is tracked as a separate hold-rate metric, never
+merged into recall or FPR). D057 extends this existing convention rather
+than inventing a new one.
+Choice:
+- FPR population: data/dev/hard_negatives.jsonl (226 records) - the
+  semantic corpus's own family strings never match "hn_", so measuring
+  FPR within the semantic corpus itself would trivially return 0.0 and
+  measure nothing.
+- FPR definition: cascade-level BLOCK rate on that population, T2 off vs
+  T2 on, same tau. Matches existing HOLD-rate counting pattern exactly,
+  substituting BLOCK for HOLD.
+- Kill criterion, fully operationalized: recall_lift(DEVIATION population
+  of M1 corpus, T2-on cascade vs T2-off cascade) >= 0.05 AND
+  (hn_block_rate(T2-on) - hn_block_rate(T2-off)) < 0.02. Both boundaries
+  are inclusive-lower/exclusive-upper as D053 originally stated (>=0.05,
+  <0.02) - not loosened to > or <=.
+Rejected: Counting HOLD as a false positive for this criterion - would
+contradict ARCHITECTURE.md's own stated cost model, where HOLD exists
+specifically because it is cheap (Rs45) and non-terminal, not a false
+positive in the traditional sense.
+Revisit: If a future corpus needs cascade-level FPR as a named,
+first-class metric outside this one-off measurement - promote
+run_cascade_on_record + cascade_verdict_rate's pattern to a documented
+public API rather than re-deriving it per-corpus.

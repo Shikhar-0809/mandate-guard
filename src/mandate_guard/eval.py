@@ -15,10 +15,10 @@ from pathlib import Path
 from typing import Literal, TypedDict, cast
 
 import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer  # type: ignore[import-untyped]
 from sklearn.linear_model import LogisticRegression  # type: ignore[import-untyped]
 from sklearn.metrics import average_precision_score  # type: ignore[import-untyped]
 from sklearn.metrics.pairwise import cosine_similarity  # type: ignore[import-untyped]
-from sklearn.feature_extraction.text import TfidfVectorizer  # type: ignore[import-untyped]
 
 from contracts import (
     CartItem,
@@ -27,7 +27,10 @@ from contracts import (
     IntentMandate,
     Money,
     Scope,
+    T2Config,
 )
+from contracts.verdict import Verdict, VerdictState
+from mandate_guard.cascade import check as cascade_check
 
 from .t0 import check as t0_check
 from .t1 import score as t1_score
@@ -192,9 +195,7 @@ def _record_semantic_text(record: dict[str, object]) -> tuple[str, str]:
     intent = str(record.get("purchase_intent") or "")
     cart_items = record.get("cart_items") or []
     cart_text = " ".join(
-        str(item.get("name") or "")
-        for item in cart_items
-        if isinstance(item, dict)
+        str(item.get("name") or "") for item in cart_items if isinstance(item, dict)
     )
     return intent, cart_text
 
@@ -352,8 +353,7 @@ def compute_metrics(
     hn_indices = [
         index
         for index, record in enumerate(records)
-        if str(record["family"]).startswith("hn_")
-        and str(record["label"]) == "ALLOW"
+        if str(record["family"]).startswith("hn_") and str(record["label"]) == "ALLOW"
     ]
     if not hn_indices:
         fpr_hard_negatives = 0.0
@@ -448,6 +448,22 @@ def load_sealed_attacks(sealed_dir: Path) -> list[dict[str, object]]:
     return records
 
 
+def load_sealed_semantic(semantic_dir: Path) -> list[dict[str, object]]:
+    sums_path = semantic_dir / "SHA256SUMS"
+    for line in sums_path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        digest, filename = line.split("  ", 1)
+        _verify_sha256(semantic_dir, filename, digest)
+    records: list[dict[str, object]] = []
+    for line in (
+        (semantic_dir / "semantic.jsonl").read_text(encoding="utf-8").splitlines()
+    ):
+        if line.strip():
+            records.append(json.loads(line))
+    return records
+
+
 def precision_vs_prevalence(
     records: list[dict[str, object]],
     scores: list[float],
@@ -525,3 +541,40 @@ def cost_ratio_sensitivity(
             }
         )
     return rows
+
+
+def run_cascade_on_record(
+    record: dict[str, object],
+    model_dir: Path,
+    tau: float,
+    t2_config: T2Config,
+) -> Verdict:
+    args = _record_to_t0_args(record)
+    return cascade_check(
+        intent=args["intent"],
+        cart=args["cart"],
+        token=args["token"],
+        transaction_amount=args["transaction_amount"],
+        merchant_id=args["merchant_id"],
+        mcc=args["mcc"],
+        now=args["now"],
+        agent_request_id=str(record.get("record_id", "eval")),
+        model_dir=model_dir,
+        tau=tau,
+        t2_config=t2_config,
+    )
+
+
+def cascade_verdict_rate(
+    records: list[dict[str, object]],
+    model_dir: Path,
+    tau: float,
+    t2_config: T2Config,
+    target_verdict: VerdictState,
+) -> float:
+    if not records:
+        return 0.0
+    verdicts = [
+        run_cascade_on_record(record, model_dir, tau, t2_config) for record in records
+    ]
+    return sum(1 for v in verdicts if v.verdict == target_verdict) / len(records)

@@ -22,8 +22,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from contracts import T2Config
-from contracts.verdict import Verdict, VerdictState
-from mandate_guard.cascade import check as cascade_check
+from contracts.verdict import VerdictState
 from mandate_guard.eval import (
     BaselineName,
     _record_to_t0_args,
@@ -34,6 +33,7 @@ from mandate_guard.eval import (
     load_sealed_attacks,
     precision_vs_prevalence,
     recall_on_records,
+    run_cascade_on_record,
     score_baseline,
     score_t0_t1,
     threshold_sweep,
@@ -84,7 +84,9 @@ def _dev_jsonl_path(
     return sidecar_path if sidecar_path.exists() else base_path
 
 
-def _load_dev(dev_dir: Path, intent_mode: IntentMode = "base") -> list[dict[str, object]]:
+def _load_dev(
+    dev_dir: Path, intent_mode: IntentMode = "base"
+) -> list[dict[str, object]]:
     for line in (dev_dir / "SHA256SUMS").read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
@@ -156,7 +158,7 @@ def _compute_cascade_dev_metrics(
         record for record in dev_records if str(record["label"]) == "BLOCK"
     ]
     cascade_dev_attack_verdicts = [
-        _run_cascade_on_record(record, model_dir, tau, t2_config)
+        run_cascade_on_record(record, model_dir, tau, t2_config)
         for record in dev_attack_records
     ]
     eval_cascade_recall_seen = sum(
@@ -164,12 +166,10 @@ def _compute_cascade_dev_metrics(
     ) / len(dev_attack_records)
 
     hard_negative_records = [
-        record
-        for record in dev_records
-        if str(record["family"]).startswith("hn_")
+        record for record in dev_records if str(record["family"]).startswith("hn_")
     ]
     cascade_hn_verdicts = [
-        _run_cascade_on_record(record, model_dir, tau, t2_config)
+        run_cascade_on_record(record, model_dir, tau, t2_config)
         for record in hard_negative_records
     ]
     eval_cascade_hold_rate_hard_negatives = sum(
@@ -204,28 +204,6 @@ def _format_metrics_row(name: str, metrics: dict[str, float]) -> str:
     )
 
 
-def _run_cascade_on_record(
-    record: dict[str, object],
-    model_dir: Path,
-    tau: float,
-    t2_config: T2Config,
-) -> Verdict:
-    args = _record_to_t0_args(record)
-    return cascade_check(
-        intent=args["intent"],
-        cart=args["cart"],
-        token=args["token"],
-        transaction_amount=args["transaction_amount"],
-        merchant_id=args["merchant_id"],
-        mcc=args["mcc"],
-        now=args["now"],
-        agent_request_id=str(record.get("record_id", "eval")),
-        model_dir=model_dir,
-        tau=tau,
-        t2_config=t2_config,
-    )
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run mandate-guard evaluation")
     parser.add_argument("--model-dir", type=Path, default=Path("models/"))
@@ -248,9 +226,7 @@ def main() -> None:
         1 for record in dev_records_no_intent if str(record["family"]) == "benign"
     )
     n_hn = sum(
-        1
-        for record in dev_records_no_intent
-        if str(record["family"]).startswith("hn_")
+        1 for record in dev_records_no_intent if str(record["family"]).startswith("hn_")
     )
     n_attacks = sum(
         1 for record in dev_records_no_intent if str(record["label"]) == "BLOCK"
@@ -325,7 +301,7 @@ def main() -> None:
     )
 
     cascade_sealed_verdicts = [
-        _run_cascade_on_record(record, args.model_dir, tau_star, t2_off)
+        run_cascade_on_record(record, args.model_dir, tau_star, t2_off)
         for record in sealed_records
     ]
     eval_cascade_recall_unseen = sum(
@@ -513,7 +489,7 @@ def main() -> None:
 
         t2_on = T2Config(t2_enabled=True)
         cascade_sealed_verdicts_t2 = [
-            _run_cascade_on_record(record, args.model_dir, tau_star, t2_on)
+            run_cascade_on_record(record, args.model_dir, tau_star, t2_on)
             for record in sealed_records
         ]
         eval_cascade_recall_unseen_t2 = sum(
@@ -527,9 +503,7 @@ def main() -> None:
         print(f"recall_unseen T0+T1+T2:  {recall_unseen_t2:.4f}")
         print(f"Lift:                    {lift:+.4f}")
         print(f"Kill criterion (>=+0.02): {'MET' if criterion_met else 'NOT MET'}")
-        print(
-            f"eval_cascade_recall_unseen_t2: {eval_cascade_recall_unseen_t2:.4f}"
-        )
+        print(f"eval_cascade_recall_unseen_t2: {eval_cascade_recall_unseen_t2:.4f}")
         if criterion_met:
             print("T2 EARNS ITS PLACE — update T2Config default to enabled.")
         else:
