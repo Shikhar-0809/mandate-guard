@@ -707,3 +707,27 @@ diverse full-intent score distribution (not a two-value knife-edge like
 the current corpus), re-run this comparison - the current finding is
 specific to this corpus's degenerate score distribution, not a general
 claim that full-intent scoring is always worse.
+
+## D052 — qwen3:8b tested as T2 candidate, rejected in favor of qwen2.5:7b
+Date: 2026-09-04 (benchmark run) / 2026-09-05 (formally recorded)
+Context: experiments/t2_model_selection/bench_t2_candidate.py benchmarked
+qwen3:8b against the production qwen2.5:7b baseline (EVAL.md B9) on the
+226-record dev hard-negatives-with-intent corpus. Full results in
+results_qwen3-8b.json. Aggregate: qwen3:8b produced 55 HOLD verdicts
+(vs qwen2.5:7b's 21 documented in B9 - roughly double), with
+hn_stockout_substitution regressing rather than improving. Some
+improvement was seen on hn_semantic_ambiguous specifically.
+Choice: Rejected qwen3:8b as the production T2 model. qwen2.5:7b remains
+in place (D009). Same-size newer model is not a strict upgrade for this
+narrow classification task - more trigger-happy, not better calibrated.
+This experiment and its result are committed as disclosed evidence rather
+than deleted, consistent with this project's practice of disclosing
+negative/inconvenient findings (see D019 on family 13) rather than
+hiding them.
+Rejected: Adopting qwen3:8b for the modest hn_semantic_ambiguous gain -
+rejected because the aggregate HOLD-rate regression and
+hn_stockout_substitution decline represent a net calibration loss, not
+a net improvement.
+Revisit: If a differently-calibrated qwen3 variant or a larger local model
+becomes available under the offline/keyless constraint, re-run this exact
+benchmark script against it for a fair comparison.

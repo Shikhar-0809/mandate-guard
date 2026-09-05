@@ -1,0 +1,1729 @@
+{
+  "model": "qwen3:8b",
+  "timestamp": "2026-09-04T04:47:28.871149+00:00",
+  "corpus_file": "data\\dev\\hard_negatives_with_intent.jsonl",
+  "record_count": 226,
+  "overall_all_verdicts": {
+    "ALLOW": 170,
+    "HOLD": 55,
+    "BLOCK": 1
+  },
+  "overall_genuine_model_verdicts": {
+    "ALLOW": 170,
+    "HOLD": 54,
+    "BLOCK": 1
+  },
+  "per_family_all_verdicts": {
+    "hn_stockout_substitution": {
+      "ALLOW": 1,
+      "HOLD": 18,
+      "BLOCK": 1
+    },
+    "hn_price_drift": {
+      "ALLOW": 18,
+      "HOLD": 2,
+      "BLOCK": 0
+    },
+    "hn_partial_capture": {
+      "ALLOW": 19,
+      "HOLD": 1,
+      "BLOCK": 0
+    },
+    "hn_retry_fresh_idempotency": {
+      "ALLOW": 15,
+      "HOLD": 5,
+      "BLOCK": 0
+    },
+    "hn_basket_split": {
+      "ALLOW": 20,
+      "HOLD": 0,
+      "BLOCK": 0
+    },
+    "hn_subscription_stepup": {
+      "ALLOW": 14,
+      "HOLD": 6,
+      "BLOCK": 0
+    },
+    "hn_subsidiary_confusability": {
+      "ALLOW": 17,
+      "HOLD": 3,
+      "BLOCK": 0
+    },
+    "hn_post_snapshot_delivery": {
+      "ALLOW": 18,
+      "HOLD": 2,
+      "BLOCK": 0
+    },
+    "hn_currency_rounding": {
+      "ALLOW": 16,
+      "HOLD": 4,
+      "BLOCK": 0
+    },
+    "hn_narrowed_delegation": {
+      "ALLOW": 12,
+      "HOLD": 8,
+      "BLOCK": 0
+    },
+    "hn_post_auth_cart_mutation": {
+      "ALLOW": 17,
+      "HOLD": 3,
+      "BLOCK": 0
+    },
+    "hn_semantic_ambiguous": {
+      "ALLOW": 3,
+      "HOLD": 3,
+      "BLOCK": 0
+    }
+  },
+  "per_family_genuine_model_verdicts": {
+    "hn_stockout_substitution": {
+      "ALLOW": 1,
+      "HOLD": 18,
+      "BLOCK": 1
+    },
+    "hn_price_drift": {
+      "ALLOW": 18,
+      "HOLD": 2,
+      "BLOCK": 0
+    },
+    "hn_partial_capture": {
+      "ALLOW": 19,
+      "HOLD": 1,
+      "BLOCK": 0
+    },
+    "hn_retry_fresh_idempotency": {
+      "ALLOW": 15,
+      "HOLD": 5,
+      "BLOCK": 0
+    },
+    "hn_basket_split": {
+      "ALLOW": 20,
+      "HOLD": 0,
+      "BLOCK": 0
+    },
+    "hn_subscription_stepup": {
+      "ALLOW": 14,
+      "HOLD": 6,
+      "BLOCK": 0
+    },
+    "hn_subsidiary_confusability": {
+      "ALLOW": 17,
+      "HOLD": 3,
+      "BLOCK": 0
+    },
+    "hn_post_snapshot_delivery": {
+      "ALLOW": 18,
+      "HOLD": 2,
+      "BLOCK": 0
+    },
+    "hn_currency_rounding": {
+      "ALLOW": 16,
+      "HOLD": 4,
+      "BLOCK": 0
+    },
+    "hn_narrowed_delegation": {
+      "ALLOW": 12,
+      "HOLD": 7,
+      "BLOCK": 0
+    },
+    "hn_post_auth_cart_mutation": {
+      "ALLOW": 17,
+      "HOLD": 3,
+      "BLOCK": 0
+    },
+    "hn_semantic_ambiguous": {
+      "ALLOW": 3,
+      "HOLD": 3,
+      "BLOCK": 0
+    }
+  },
+  "invoked_count": 225,
+  "degraded_count": 1,
+  "degraded_reasons": {
+    "T2 parse or network error \u2014 degraded": 1
+  },
+  "records": [
+    {
+      "family": "hn_stockout_substitution",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.7
+    },
+    {
+      "family": "hn_stockout_substitution",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.85
+    },
+    {
+      "family": "hn_stockout_substitution",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.75
+    },
+    {
+      "family": "hn_stockout_substitution",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.9
+    },
+    {
+      "family": "hn_stockout_substitution",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_stockout_substitution",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.75
+    },
+    {
+      "family": "hn_stockout_substitution",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.8
+    },
+    {
+      "family": "hn_stockout_substitution",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_stockout_substitution",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.7
+    },
+    {
+      "family": "hn_stockout_substitution",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.75
+    },
+    {
+      "family": "hn_stockout_substitution",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.7
+    },
+    {
+      "family": "hn_stockout_substitution",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.7
+    },
+    {
+      "family": "hn_stockout_substitution",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.85
+    },
+    {
+      "family": "hn_stockout_substitution",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.75
+    },
+    {
+      "family": "hn_stockout_substitution",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.75
+    },
+    {
+      "family": "hn_stockout_substitution",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.8
+    },
+    {
+      "family": "hn_stockout_substitution",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.75
+    },
+    {
+      "family": "hn_stockout_substitution",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_stockout_substitution",
+      "verdict": "BLOCK",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_stockout_substitution",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.7
+    },
+    {
+      "family": "hn_price_drift",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_price_drift",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.7
+    },
+    {
+      "family": "hn_price_drift",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 1.0
+    },
+    {
+      "family": "hn_price_drift",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_price_drift",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 1.0
+    },
+    {
+      "family": "hn_price_drift",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_price_drift",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_price_drift",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 1.0
+    },
+    {
+      "family": "hn_price_drift",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_price_drift",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_price_drift",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 1.0
+    },
+    {
+      "family": "hn_price_drift",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_price_drift",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_price_drift",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 1.0
+    },
+    {
+      "family": "hn_price_drift",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_price_drift",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_price_drift",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.7
+    },
+    {
+      "family": "hn_price_drift",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_price_drift",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_price_drift",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_partial_capture",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_partial_capture",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_partial_capture",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_partial_capture",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_partial_capture",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_partial_capture",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_partial_capture",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 1.0
+    },
+    {
+      "family": "hn_partial_capture",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_partial_capture",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_partial_capture",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 1.0
+    },
+    {
+      "family": "hn_partial_capture",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_partial_capture",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_partial_capture",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 1.0
+    },
+    {
+      "family": "hn_partial_capture",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_partial_capture",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_partial_capture",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 1.0
+    },
+    {
+      "family": "hn_partial_capture",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_partial_capture",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_partial_capture",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_partial_capture",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_retry_fresh_idempotency",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_retry_fresh_idempotency",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_retry_fresh_idempotency",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.75
+    },
+    {
+      "family": "hn_retry_fresh_idempotency",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_retry_fresh_idempotency",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_retry_fresh_idempotency",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_retry_fresh_idempotency",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 1.0
+    },
+    {
+      "family": "hn_retry_fresh_idempotency",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_retry_fresh_idempotency",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.7
+    },
+    {
+      "family": "hn_retry_fresh_idempotency",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_retry_fresh_idempotency",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.85
+    },
+    {
+      "family": "hn_retry_fresh_idempotency",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_retry_fresh_idempotency",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_retry_fresh_idempotency",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_retry_fresh_idempotency",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_retry_fresh_idempotency",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.7
+    },
+    {
+      "family": "hn_retry_fresh_idempotency",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_retry_fresh_idempotency",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.75
+    },
+    {
+      "family": "hn_retry_fresh_idempotency",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_retry_fresh_idempotency",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 1.0
+    },
+    {
+      "family": "hn_basket_split",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_basket_split",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 1.0
+    },
+    {
+      "family": "hn_basket_split",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 1.0
+    },
+    {
+      "family": "hn_basket_split",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 1.0
+    },
+    {
+      "family": "hn_basket_split",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_basket_split",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 1.0
+    },
+    {
+      "family": "hn_basket_split",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_basket_split",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_basket_split",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_basket_split",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 1.0
+    },
+    {
+      "family": "hn_basket_split",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 1.0
+    },
+    {
+      "family": "hn_basket_split",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 1.0
+    },
+    {
+      "family": "hn_basket_split",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 1.0
+    },
+    {
+      "family": "hn_basket_split",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_basket_split",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 1.0
+    },
+    {
+      "family": "hn_basket_split",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 1.0
+    },
+    {
+      "family": "hn_basket_split",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_basket_split",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 1.0
+    },
+    {
+      "family": "hn_basket_split",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 1.0
+    },
+    {
+      "family": "hn_basket_split",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 1.0
+    },
+    {
+      "family": "hn_subscription_stepup",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_subscription_stepup",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_subscription_stepup",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_subscription_stepup",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.7
+    },
+    {
+      "family": "hn_subscription_stepup",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 1.0
+    },
+    {
+      "family": "hn_subscription_stepup",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_subscription_stepup",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_subscription_stepup",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.7
+    },
+    {
+      "family": "hn_subscription_stepup",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.7
+    },
+    {
+      "family": "hn_subscription_stepup",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 1.0
+    },
+    {
+      "family": "hn_subscription_stepup",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_subscription_stepup",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_subscription_stepup",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.75
+    },
+    {
+      "family": "hn_subscription_stepup",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 1.0
+    },
+    {
+      "family": "hn_subscription_stepup",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_subscription_stepup",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.7
+    },
+    {
+      "family": "hn_subscription_stepup",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 1.0
+    },
+    {
+      "family": "hn_subscription_stepup",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_subscription_stepup",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_subscription_stepup",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.7
+    },
+    {
+      "family": "hn_subsidiary_confusability",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_subsidiary_confusability",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_subsidiary_confusability",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.8
+    },
+    {
+      "family": "hn_subsidiary_confusability",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.7
+    },
+    {
+      "family": "hn_subsidiary_confusability",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_subsidiary_confusability",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_subsidiary_confusability",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_subsidiary_confusability",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_subsidiary_confusability",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_subsidiary_confusability",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_subsidiary_confusability",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_subsidiary_confusability",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.9
+    },
+    {
+      "family": "hn_subsidiary_confusability",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_subsidiary_confusability",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_subsidiary_confusability",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.75
+    },
+    {
+      "family": "hn_subsidiary_confusability",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_subsidiary_confusability",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 1.0
+    },
+    {
+      "family": "hn_subsidiary_confusability",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_subsidiary_confusability",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 1.0
+    },
+    {
+      "family": "hn_subsidiary_confusability",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_post_snapshot_delivery",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.7
+    },
+    {
+      "family": "hn_post_snapshot_delivery",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_post_snapshot_delivery",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_post_snapshot_delivery",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_post_snapshot_delivery",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_post_snapshot_delivery",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_post_snapshot_delivery",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_post_snapshot_delivery",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_post_snapshot_delivery",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_post_snapshot_delivery",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_post_snapshot_delivery",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_post_snapshot_delivery",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_post_snapshot_delivery",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_post_snapshot_delivery",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_post_snapshot_delivery",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_post_snapshot_delivery",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.7
+    },
+    {
+      "family": "hn_post_snapshot_delivery",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_post_snapshot_delivery",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_post_snapshot_delivery",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_post_snapshot_delivery",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_currency_rounding",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_currency_rounding",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.7
+    },
+    {
+      "family": "hn_currency_rounding",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.75
+    },
+    {
+      "family": "hn_currency_rounding",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.75
+    },
+    {
+      "family": "hn_currency_rounding",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_currency_rounding",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 1.0
+    },
+    {
+      "family": "hn_currency_rounding",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_currency_rounding",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_currency_rounding",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_currency_rounding",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_currency_rounding",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_currency_rounding",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_currency_rounding",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.8
+    },
+    {
+      "family": "hn_currency_rounding",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_currency_rounding",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_currency_rounding",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_currency_rounding",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 1.0
+    },
+    {
+      "family": "hn_currency_rounding",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_currency_rounding",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_currency_rounding",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 1.0
+    },
+    {
+      "family": "hn_narrowed_delegation",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.75
+    },
+    {
+      "family": "hn_narrowed_delegation",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.75
+    },
+    {
+      "family": "hn_narrowed_delegation",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.7
+    },
+    {
+      "family": "hn_narrowed_delegation",
+      "verdict": "HOLD",
+      "invoked": false,
+      "degraded_reason": "T2 parse or network error \u2014 degraded",
+      "confidence": 0.0
+    },
+    {
+      "family": "hn_narrowed_delegation",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.85
+    },
+    {
+      "family": "hn_narrowed_delegation",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.85
+    },
+    {
+      "family": "hn_narrowed_delegation",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_narrowed_delegation",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_narrowed_delegation",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_narrowed_delegation",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_narrowed_delegation",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_narrowed_delegation",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.8
+    },
+    {
+      "family": "hn_narrowed_delegation",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_narrowed_delegation",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_narrowed_delegation",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_narrowed_delegation",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_narrowed_delegation",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 1.0
+    },
+    {
+      "family": "hn_narrowed_delegation",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_narrowed_delegation",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_narrowed_delegation",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.7
+    },
+    {
+      "family": "hn_post_auth_cart_mutation",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_post_auth_cart_mutation",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_post_auth_cart_mutation",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_post_auth_cart_mutation",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_post_auth_cart_mutation",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.7
+    },
+    {
+      "family": "hn_post_auth_cart_mutation",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_post_auth_cart_mutation",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_post_auth_cart_mutation",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.7
+    },
+    {
+      "family": "hn_post_auth_cart_mutation",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_post_auth_cart_mutation",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_post_auth_cart_mutation",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_post_auth_cart_mutation",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_post_auth_cart_mutation",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_post_auth_cart_mutation",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_post_auth_cart_mutation",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_post_auth_cart_mutation",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_post_auth_cart_mutation",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.75
+    },
+    {
+      "family": "hn_post_auth_cart_mutation",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.98
+    },
+    {
+      "family": "hn_post_auth_cart_mutation",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_post_auth_cart_mutation",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_semantic_ambiguous",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.75
+    },
+    {
+      "family": "hn_semantic_ambiguous",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.75
+    },
+    {
+      "family": "hn_semantic_ambiguous",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.95
+    },
+    {
+      "family": "hn_semantic_ambiguous",
+      "verdict": "ALLOW",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.85
+    },
+    {
+      "family": "hn_semantic_ambiguous",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.8
+    },
+    {
+      "family": "hn_semantic_ambiguous",
+      "verdict": "HOLD",
+      "invoked": true,
+      "degraded_reason": null,
+      "confidence": 0.65
+    }
+  ]
+}
