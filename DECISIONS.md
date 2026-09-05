@@ -533,3 +533,36 @@ Choice: Move Desk Lamp leaf to Electronics > Office > Desk Lamp in taxonomy.py
 Rejected: Moving Desk Lamp to groceries or regenerating corpus — only one of 30
 vocab items mismatched; root cause was taxonomy top-level, not generate logic.
 Revisit: Re-audit if either vocabulary expands without paired taxonomy update.
+
+## D044 — taxonomy.py rebuilt to 10 balanced top-level categories
+Date: 2026-09-05
+Context: TAXONOMY_LEAVES had 4 top-level categories with leaf counts 18/13/1/2
+(Home Goods had exactly 1 leaf, Apparel 2). This is the same class of
+independent-vocabulary drift that caused the earlier Desk Lamp mismatch, at
+corpus scale, and would have propagated into M1's semantic sealed set.
+Choice: Expanded to 10 top-level categories, all leaf counts in [10,18],
+by fleshing out Home Goods/Apparel and adding 6 new categories. No leaf
+strings were removed; hierarchy_distance()/matching logic unchanged.
+Rejected: Building M1 against the 4-category taxonomy as-is and treating
+the 10-category scheme as independent — rejected per standing anti-shim
+principle; this would reproduce the Desk Lamp drift, not avoid it.
+Revisit: If a real external product taxonomy becomes usable under the
+offline/keyless constraint (see D042/D043 reasoning).
+Note: data/generate.py's hn_post_auth_cart_mutation still uses its own
+independent _ELECTRONICS_PRODUCTS/_GROCERIES_PRODUCTS vocab, unrelated to
+TAXONOMY_LEAVES. Same drift risk exists there, not fixed by this entry,
+tracked as a known-not-fixed gap.
+
+## D045 — models/feature_names.json was missing category_hierarchy_distance
+Date: 2026-09-05
+Context: Found during taxonomy rebuild recon, unrelated to the rebuild itself.
+FEATURE_NAMES in features.py has always had 8 entries since S2 shipped, but
+the committed models/feature_names.json artifact only listed 7 — the deployed
+T1 model was never actually retrained with the 8th feature. score() avoided
+crashing only via the taxonomy_vec-is-None graceful-degradation branch,
+silently emitting 0.0 for a feature the code believed was live.
+Choice: Fixed by the retrain in this same diff (Step 4) — no separate
+retrain needed, real fix not a shim.
+Rejected: Leaving it and documenting as a known limitation — rejected per
+standing anti-shim principle; a real fix (retrain) was available.
+Revisit: N/A — closed by this diff.

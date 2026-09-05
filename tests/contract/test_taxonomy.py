@@ -30,3 +30,19 @@ def test_at_least_four_distinct_top_level_categories() -> None:
 
 def test_at_least_twenty_five_total_leaves() -> None:
     assert len(TAXONOMY_LEAVES) >= 25
+
+
+def test_categories_are_reasonably_balanced() -> None:
+    """Guards against a repeat of the 1-leaf-Home-Goods / 18-leaf-Electronics
+    imbalance that this test would have caught originally."""
+    from collections import Counter
+    top_levels = [leaf.split(" > ", 1)[0] for leaf in TAXONOMY_LEAVES]
+    counts = Counter(top_levels)
+    assert len(counts) >= 10, f"expected >=10 top-level categories, got {len(counts)}"
+    min_count = min(counts.values())
+    max_count = max(counts.values())
+    assert min_count >= 8, f"category {min(counts, key=counts.get)!r} has only {min_count} leaves"
+    assert max_count <= 3 * min_count, (
+        f"imbalance too large: max={max_count} min={min_count} "
+        f"({dict(counts)})"
+    )
