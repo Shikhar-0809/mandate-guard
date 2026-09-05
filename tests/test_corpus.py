@@ -77,6 +77,20 @@ SEALED_EXPECTED_FAMILIES = {
     "attack_family_13",
 }
 
+DATA_SEALED_SEMANTIC = PROJECT_ROOT / "data" / "sealed_semantic"
+SEMANTIC_EXPECTED_FAMILIES = {
+    "semantic_apparel",
+    "semantic_automotive",
+    "semantic_books_media",
+    "semantic_electronics",
+    "semantic_groceries",
+    "semantic_health_personal_care",
+    "semantic_home_goods",
+    "semantic_office_supplies",
+    "semantic_pet_supplies",
+    "semantic_toys_games",
+}
+
 
 def load_jsonl(path: Path) -> list[dict[str, object]]:
     records: list[dict[str, object]] = []
@@ -494,3 +508,40 @@ def test_cascade_dev_metrics_use_both_intent_loaders() -> None:
         cascade_no_intent["eval_cascade_recall_seen"]
         < cascade_full_intent["eval_cascade_recall_seen"]
     )
+
+
+def test_semantic_sha256_integrity() -> None:
+    verify_sha256sums(DATA_SEALED_SEMANTIC)
+
+
+def test_semantic_record_count() -> None:
+    assert len(load_jsonl(DATA_SEALED_SEMANTIC / "semantic.jsonl")) == 500
+
+
+def test_semantic_family_coverage() -> None:
+    families = {
+        str(record["family"])
+        for record in load_jsonl(DATA_SEALED_SEMANTIC / "semantic.jsonl")
+    }
+    assert families == SEMANTIC_EXPECTED_FAMILIES
+
+
+def test_load_sealed_semantic_returns_records() -> None:
+    from mandate_guard.eval import load_sealed_semantic
+
+    records = load_sealed_semantic(DATA_SEALED_SEMANTIC)
+    assert len(records) == 500
+    families = {str(r["family"]) for r in records}
+    assert families == SEMANTIC_EXPECTED_FAMILIES
+
+
+def test_load_sealed_semantic_sha_mismatch_raises(tmp_path: Path) -> None:
+    from mandate_guard.eval import load_sealed_semantic
+
+    real_file = DATA_SEALED_SEMANTIC / "semantic.jsonl"
+    (tmp_path / "semantic.jsonl").write_bytes(real_file.read_bytes())
+    (tmp_path / "SHA256SUMS").write_text(
+        "0" * 64 + "  semantic.jsonl\n", encoding="utf-8"
+    )
+    with pytest.raises(ValueError):
+        load_sealed_semantic(tmp_path)
